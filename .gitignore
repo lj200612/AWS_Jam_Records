@@ -5,8 +5,8 @@ Thumbs.db
 .idea/
 
 # TeX build artifacts
-build/
-_manual_build.*
+**/build/
+**/_manual_build.*
 *.aux
 *.bbl
 *.bcf
