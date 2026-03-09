@@ -1,0 +1,244 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{amssymb}
+
+% 页眉页脚
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{AWS Jam 知识点整理}
+\lhead{\leftmark}
+\cfoot{\thepage}
+
+% 代码样式
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{gray!10},
+  frame=single,
+  rulecolor=\color{gray!40},
+  breaklines=true,
+  keywordstyle=\color{blue!70},
+  commentstyle=\color{green!50!black},
+  stringstyle=\color{red!60},
+  showstringspaces=false,
+  language=bash
+}
+
+% 标题样式
+\titleformat{\section}{\Large\bfseries\color{blue!70}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{blue!50}}{}{0em}{}
+
+\title{
+  \vspace{2cm}
+  \textbf{\Huge AWS Jam 知识点整理} \\[1em]
+  \large Amazon Aurora RDS \& Graviton 实践
+  \vspace{1cm}
+}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{Amazon RDS 备份机制}
+% ============================================================
+
+\subsection{两种备份类型}
+
+RDS 提供两种互补的备份机制：
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{特性} & \textbf{自动备份} & \textbf{手动快照} \\
+\midrule
+触发方式     & 自动（每日）       & 手动触发 \\
+保留期限     & 1--35 天后自动删除 & 永久保留，需手动删除 \\
+时间点恢复   & \checkmark 支持    & $\times$ 不支持 \\
+跨账号共享   & $\times$           & \checkmark 支持 \\
+删除实例后   & 自动删除           & 继续保留 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{自动备份配置}
+
+\begin{itemize}[leftmargin=2em]
+  \item 路径：RDS $\to$ Databases $\to$ 实例 $\to$ \textbf{Modify} $\to$ Backup
+  \item \textbf{Backup retention period}：设置保留天数（建议生产环境 $\geq$ 7 天）
+  \item \textbf{Backup window}：建议选择业务低峰时段
+  \item 设为 0 则关闭自动备份（不推荐生产环境使用）
+\end{itemize}
+
+\subsection{手动快照操作}
+
+控制台路径：RDS $\to$ Databases $\to$ Actions $\to$ \textbf{Take snapshot}
+
+\begin{lstlisting}
+# CLI 创建快照
+aws rds create-db-snapshot \
+  --db-instance-identifier my-db \
+  --db-snapshot-identifier my-snapshot-20260309
+\end{lstlisting}
+
+\subsection{恢复备份}
+
+\begin{itemize}[leftmargin=2em]
+  \item 恢复操作会\textbf{创建新实例}，而非覆盖原实例
+  \item 快照恢复：Snapshots $\to$ Actions $\to$ \textbf{Restore snapshot}
+  \item 时间点恢复：实例详情 $\to$ Actions $\to$ \textbf{Restore to point in time}
+\end{itemize}
+
+% ============================================================
+\section{Graviton CPU 实例}
+% ============================================================
+
+\subsection{什么是 Graviton}
+
+AWS Graviton 是亚马逊自研的 \textbf{ARM 架构}处理器，RDS 支持以下几代：
+
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{Graviton2}：r6g、m6g、c6g 系列
+  \item \textbf{Graviton3}：r7g、m7g 系列
+  \item \textbf{Graviton4}：r8g、m8g 系列
+\end{itemize}
+
+相较 x86 实例，性价比提升约 \textbf{20--35\%}。
+
+\subsection{引擎版本要求}
+
+Graviton 可用性取决于\textbf{具体实例家族、数据库引擎、主版本与次版本}，不适合写成一张固定的总表。
+
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{不同代际的最低版本不同}：例如较新的 \texttt{m8g/r8g} 通常要求比 \texttt{m7g/r7g} 更高的引擎次版本
+  \item \textbf{同一引擎也会分家族}：是否能选某个 Graviton 型号，应以 RDS 控制台 \textbf{Modify} 页面可选项或官方 \textbf{DB instance class support matrix} 为准
+  \item \textbf{迁移前先核对矩阵}：不要假设 ``MySQL 8.0+ / PostgreSQL 12+ / MariaDB 10.4+'' 对所有 Graviton 家族都成立
+\end{itemize}
+
+\subsection{实例类型对应关系}
+
+更换 Graviton 时，需保持 \textbf{vCPU 和内存不变}，仅更换 CPU 架构：
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{x86 实例} & \textbf{Graviton 对应实例} & \textbf{规格} \\
+\midrule
+db.r5.large  & db.r6g.large  & 2 vCPU / 16 GB \\
+db.r5.xlarge & db.r6g.xlarge & 4 vCPU / 32 GB \\
+db.m5.large  & db.m6g.large  & 2 vCPU / 8 GB  \\
+db.m5.xlarge & db.m6g.xlarge & 4 vCPU / 16 GB \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{规律}：系列字母不变（r $\to$ r，m $\to$ m），数字后加 \texttt{g}，大小规格不变。
+
+\subsection{修改实例操作}
+
+\begin{enumerate}[leftmargin=2em]
+  \item RDS $\to$ Databases $\to$ 选中实例 $\to$ \textbf{Modify}
+  \item Instance configuration $\to$ DB instance class $\to$ 选择 Graviton 型号
+  \item 生效时间选择 \textbf{Apply immediately}（Jam 实验需立即验证）
+  \item 确认修改
+\end{enumerate}
+
+\begin{lstlisting}
+# CLI 修改实例类型
+aws rds modify-db-instance \
+  --db-instance-identifier my-db \
+  --db-instance-class db.r6g.large \
+  --apply-immediately
+\end{lstlisting}
+
+\textbf{注意}：更换实例类型需要重启；Multi-AZ 部署可将停机时间压缩至秒级。
+
+% ============================================================
+\section{Amazon Aurora 集群架构与故障转移}
+% ============================================================
+
+\subsection{Aurora 集群基本结构}
+
+\begin{itemize}[leftmargin=2em]
+  \item 一个集群包含一个 \textbf{Writer 实例}（主节点）和若干 \textbf{Reader 实例}（从节点）
+  \item \textbf{Cluster Endpoint}：始终指向当前 Writer，应用无需感知主从变化
+  \item \textbf{Reader Endpoint}：负载均衡所有 Reader，用于只读查询
+\end{itemize}
+
+\subsection{Failover（故障转移）}
+
+Failover 是将指定 Reader 提升为 Writer 的标准方式，特点如下：
+
+\begin{itemize}[leftmargin=2em]
+  \item 切换时间约 \textbf{30 秒内}完成
+  \item 原 Writer 自动降级为 Reader，\textbf{无需手动干预}
+  \item 应用连接串不需要修改（Cluster Endpoint 自动更新）
+  \item 可随时再次 Failover 回滚，适合灰度测试场景
+\end{itemize}
+
+\subsection{Failover 操作步骤}
+
+\begin{enumerate}[leftmargin=2em]
+  \item RDS $\to$ Databases $\to$ 点击进入 \textbf{Aurora 集群}
+  \item 右上角 \textbf{Actions $\to$ Failover}
+  \item 在弹出框中选择目标实例（要提升为 Writer 的实例）
+  \item 确认执行
+  \item 等待状态恢复为 \texttt{Available} 后验证结果
+\end{enumerate}
+
+\subsection{Failover 与主从手动切换的区别}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{方式} & \textbf{停机时间} & \textbf{适用场景} \\
+\midrule
+Failover（手动触发）   & $\sim$30 秒 & 计划内主从切换、灰度测试 \\
+自动 Failover（故障时）& $\sim$30 秒 & 主节点宕机时自动触发 \\
+Modify 实例类型        & 重启时间    & 变更实例规格 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\section{本次 Jam 操作流程总结}
+% ============================================================
+
+\begin{enumerate}[leftmargin=2em, label=\textbf{Task \arabic*.}]
+  \item \textbf{RDS 备份}：了解自动备份与手动快照的差异，掌握配置和恢复操作。
+
+  \item \textbf{更换 Graviton 实例}：
+  \begin{itemize}
+    \item 查看当前实例类型（如 \texttt{db.r5.large}）
+    \item 找到规格相同的 Graviton 对应型号（如 \texttt{db.r6g.large}）
+    \item 通过 Modify 更改 DB instance class
+  \end{itemize}
+
+  \item \textbf{Aurora 主从切换}：
+  \begin{itemize}
+    \item 通过 Failover 将 Graviton 实例提升为 Writer
+    \item 验证写操作是否路由到 Graviton 实例
+    \item 如需回滚，再次执行 Failover 恢复 x86 为 Writer
+  \end{itemize}
+\end{enumerate}
+
+\vspace{2em}
+\begin{center}
+  \color{gray}\small 整理于 \today
+\end{center}
+
+\end{document}

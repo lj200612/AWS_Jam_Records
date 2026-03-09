@@ -1,0 +1,434 @@
+\documentclass[12pt, a4paper]{article}
+
+% Packages
+\usepackage[UTF8]{ctex}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\usepackage{mdframed}
+\usepackage{fontawesome5}
+
+% Page style
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{AWS Jam Challenge}
+\lhead{Amazon ECR 资源策略修复}
+\cfoot{\thepage}
+
+% Colors
+\definecolor{awsorange}{RGB}{255, 153, 0}
+\definecolor{codeblue}{RGB}{0, 102, 204}
+\definecolor{codegray}{RGB}{245, 245, 245}
+\definecolor{codecomment}{RGB}{106, 153, 85}
+\definecolor{codestring}{RGB}{206, 145, 120}
+\definecolor{codekeyword}{RGB}{86, 156, 214}
+\definecolor{alertred}{RGB}{220, 50, 47}
+\definecolor{successgreen}{RGB}{0, 128, 0}
+
+% Section formatting
+\titleformat{\section}
+  {\Large\bfseries\color{awsorange}}
+  {\thesection}{1em}{}[\titlerule]
+
+\titleformat{\subsection}
+  {\large\bfseries\color{codeblue}}
+  {\thesubsection}{1em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries}
+  {\thesubsubsection}{1em}{}
+
+% Code listing style
+\lstdefinestyle{jsonStyle}{
+  backgroundcolor=\color{codegray},
+  commentstyle=\color{codecomment},
+  keywordstyle=\color{codekeyword}\bfseries,
+  stringstyle=\color{codestring},
+  basicstyle=\ttfamily\small,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=8pt,
+  numberstyle=\tiny\color{gray},
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2,
+  frame=single,
+  rulecolor=\color{codeblue!40},
+  xleftmargin=15pt,
+  xrightmargin=5pt
+}
+
+\lstset{style=jsonStyle}
+
+% Highlight box
+\newmdenv[
+  topline=true,
+  bottomline=true,
+  rightline=true,
+  leftline=true,
+  linecolor=awsorange,
+  linewidth=1.5pt,
+  backgroundcolor=awsorange!8,
+  innertopmargin=8pt,
+  innerbottommargin=8pt,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+]{warningbox}
+
+\newmdenv[
+  linecolor=codeblue,
+  linewidth=1.5pt,
+  backgroundcolor=codeblue!5,
+  innertopmargin=8pt,
+  innerbottommargin=8pt,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+]{infobox}
+
+\newmdenv[
+  linecolor=successgreen,
+  linewidth=1.5pt,
+  backgroundcolor=successgreen!5,
+  innertopmargin=8pt,
+  innerbottommargin=8pt,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+]{successbox}
+
+% Hyperlink setup
+\hypersetup{
+  colorlinks=true,
+  linkcolor=codeblue,
+  urlcolor=codeblue
+}
+
+% ============================================================
+\begin{document}
+% ============================================================
+
+% Title
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+  {\fontsize{28}{36}\bfseries\color{awsorange} AWS Jam Challenge}\par
+  \vspace{0.5cm}
+  {\Large\bfseries\color{black} Amazon ECR 资源策略修复}\par
+  \vspace{0.5cm}
+  \rule{0.6\textwidth}{1.5pt}\par
+  \vspace{1cm}
+  {\large 知识点总结 \& 操作指南}\par
+  \vspace{2cm}
+  \begin{infobox}
+    \centering
+    \textbf{涉及服务：} Amazon ECR \quad|\quad AWS IAM \quad|\quad AWS CodeBuild
+  \end{infobox}
+  \vfill
+  {\small 文档生成日期：\today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{题目背景}
+% ============================================================
+
+\subsection{场景描述}
+
+在一个典型的 CI/CD 流水线中，\textbf{AWS CodeBuild} 负责构建 Docker 镜像并将其推送至 \textbf{Amazon ECR}（弹性容器注册表）。然而，由于 ECR 仓库配置了\textbf{资源策略（Resource-based Policy）}，其中存在一条 \texttt{Deny} 规则，导致 CodeBuild 的服务角色也被拦截，无法执行推送操作。
+
+\subsection{问题仓库}
+
+\begin{infobox}
+  \textbf{ECR 仓库名称：} \texttt{pyei-challenge-app}
+\end{infobox}
+
+\subsection{原始策略（有问题的配置）}
+
+\begin{lstlisting}[language={}]
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyPutImage",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "ecr:PutImage"
+    }
+  ]
+}
+\end{lstlisting}
+
+\begin{warningbox}
+  \textbf{问题所在：} 该策略对 \texttt{Principal: "*"} 全体主体拒绝 \texttt{ecr:PutImage} 操作，
+  没有任何例外，导致 CodeBuild 的服务角色（Service Role）也被拒绝推送镜像。
+\end{warningbox}
+
+% ============================================================
+\section{任务目标}
+% ============================================================
+
+修改 \texttt{DenyPutImage} 语句，使用 \textbf{条件键（Condition Key）}
+\texttt{aws:PrincipalArn} 排除 AWS CodeBuild 服务角色，使其不受 Deny 规则影响，
+从而恢复 CI/CD 流水线的正常推送能力。
+
+\begin{successbox}
+  \textbf{验收标准：} 在 ECR 资源策略的 Deny 语句中，使用 \texttt{aws:PrincipalArn}
+  全局条件键排除 CodeBuild 服务角色 ARN。
+\end{successbox}
+
+% ============================================================
+\section{操作步骤}
+% ============================================================
+
+\subsection{第一步：获取 CodeBuild 服务角色 ARN}
+
+\begin{enumerate}[leftmargin=*, label=\textbf{\arabic*.}]
+  \item 登录 \textbf{AWS 管理控制台}
+  \item 导航至 \textbf{IAM} $\rightarrow$ \textbf{Roles（角色）}
+  \item 在搜索框输入 \texttt{codebuild} 进行筛选
+  \item 点击对应的 CodeBuild 服务角色
+  \item 复制其完整 ARN
+\end{enumerate}
+
+\begin{infobox}
+  \textbf{ARN 格式示例：}\\
+  \texttt{arn:aws:iam::<账号ID>:role/codebuild-<项目名>-service-role}
+\end{infobox}
+
+\subsection{第二步：修改 ECR 资源策略}
+
+\begin{enumerate}[leftmargin=*, label=\textbf{\arabic*.}]
+  \item 进入 \textbf{Amazon ECR 控制台}
+  \item 在左侧导航栏选择 \textbf{Repositories（仓库）}
+  \item 点击仓库 \texttt{pyei-challenge-app}
+  \item 选择 \textbf{Permissions（权限）} 标签页
+  \item 点击 \textbf{Edit policy JSON}
+  \item 将策略替换为修复后的版本（见第四节）
+  \item 点击 \textbf{Save（保存）}
+\end{enumerate}
+
+\subsection{第三步：验证修复结果}
+
+在 CI/CD 流水线中重新触发构建，或通过以下 AWS CLI 命令测试推送：
+
+\begin{lstlisting}[language=bash]
+# 登录到 ECR
+aws ecr get-login-password --region <region> | \
+  docker login --username AWS \
+  --password-stdin <account_id>.dkr.ecr.<region>.amazonaws.com
+
+# 推送镜像
+docker push <account_id>.dkr.ecr.<region>.amazonaws.com/pyei-challenge-app:latest
+\end{lstlisting}
+
+% ============================================================
+\section{修复后的策略}
+% ============================================================
+
+\subsection{完整策略 JSON}
+
+\begin{lstlisting}[language={}]
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyPutImage",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "ecr:PutImage",
+      "Condition": {
+        "ArnNotEquals": {
+          "aws:PrincipalArn":
+            "arn:aws:iam::123456789012:role/codebuild-xxx-service-role"
+        }
+      }
+    }
+  ]
+}
+\end{lstlisting}
+
+\begin{warningbox}
+  \textbf{注意：} 请将 \texttt{arn:aws:iam::123456789012:role/codebuild-xxx-service-role}
+  替换为你在第一步中找到的真实 CodeBuild 服务角色 ARN。
+\end{warningbox}
+
+% ============================================================
+\section{核心知识点}
+% ============================================================
+
+\subsection{IAM Policy 评估逻辑}
+
+AWS IAM 在评估权限时遵循以下优先级规则：
+
+\begin{center}
+\begin{tabular}{clc}
+  \toprule
+  \textbf{优先级} & \textbf{规则} & \textbf{结果} \\
+  \midrule
+  1 & 显式 Deny（无条件） & 拒绝 \\
+  2 & 显式 Deny（条件不满足时跳过） & 取决于条件 \\
+  3 & 显式 Allow & 允许 \\
+  4 & 隐式 Deny（无匹配语句） & 拒绝 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{全局条件键 \texttt{aws:PrincipalArn}}
+
+\texttt{aws:PrincipalArn} 是一个 \textbf{IAM 全局条件键（Global Condition Key）}，用于匹配发出请求的 IAM 主体（Principal）的 ARN。
+
+\begin{center}
+\begin{tabular}{lll}
+  \toprule
+  \textbf{条件运算符} & \textbf{含义} & \textbf{适用场景} \\
+  \midrule
+  \texttt{ArnEquals} & ARN 完全匹配 & 精确排除某个角色 \\
+  \texttt{ArnNotEquals} & ARN 不匹配时为真 & 排除特定角色 \\
+  \texttt{ArnLike} & ARN 支持通配符匹配 & 排除一类角色 \\
+  \texttt{ArnNotLike} & ARN 不匹配通配符时为真 & 排除一类角色 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Deny + ArnNotEquals 的组合逻辑}
+
+这是本题的核心逻辑，可用以下表格理解：
+
+\begin{center}
+\begin{tabular}{lllc}
+  \toprule
+  \textbf{请求者} & \textbf{ArnNotEquals 结果} & \textbf{Condition 满足？} & \textbf{Deny 生效？} \\
+  \midrule
+  CodeBuild 角色 & \texttt{false} & 否 & \textcolor{successgreen}{\textbf{否（允许）}} \\
+  其他 IAM 主体 & \texttt{true} & 是 & \textcolor{alertred}{\textbf{是（拒绝）}} \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\begin{infobox}
+  \textbf{理解要点：} 条件（Condition）是 Deny 语句的\textbf{触发门槛}。只有当条件为 \texttt{true} 时，
+  Deny 才生效。使用 \texttt{ArnNotEquals} 意味着：``除了指定的 ARN 以外的所有人，才触发拒绝''。
+\end{infobox}
+
+\subsection{ECR 资源策略 vs IAM 身份策略}
+
+\begin{center}
+\begin{tabular}{lll}
+  \toprule
+  \textbf{属性} & \textbf{ECR 资源策略} & \textbf{IAM 身份策略} \\
+  \midrule
+  附加对象 & ECR 仓库（资源） & IAM 用户/角色/组 \\
+  控制方向 & 谁可以访问此资源 & 此主体可访问哪些资源 \\
+  跨账号访问 & 支持 & 需配合资源策略 \\
+  Principal 字段 & 必须指定 & 不需要（隐式为附加主体）\\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Amazon ECR 常用操作权限}
+
+\begin{center}
+\begin{tabular}{ll}
+  \toprule
+  \textbf{权限} & \textbf{用途} \\
+  \midrule
+  \texttt{ecr:PutImage} & 创建或更新镜像 manifest 与 tag \\
+  \texttt{ecr:GetDownloadUrlForLayer} & 拉取镜像层 \\
+  \texttt{ecr:BatchGetImage} & 批量获取镜像 \\
+  \texttt{ecr:GetAuthorizationToken} & 获取认证 Token（需 IAM 策略）\\
+  \texttt{ecr:InitiateLayerUpload} & 初始化镜像层上传 \\
+  \texttt{ecr:UploadLayerPart} & 上传镜像层分片 \\
+  \texttt{ecr:CompleteLayerUpload} & 完成镜像层上传 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\section{架构图解}
+% ============================================================
+
+\subsection{CI/CD 流水线与 ECR 交互流程}
+
+\begin{infobox}
+\begin{verbatim}
+  开发者提交代码
+       |
+       v
+  [AWS CodePipeline]
+       |
+       v
+  [AWS CodeBuild]  <-- 使用 Service Role ARN
+       |
+       | docker push
+       v
+  [Amazon ECR]
+  pyei-challenge-app
+       |
+       | ECR 资源策略检查
+       v
+  ┌─────────────────────────────────────────┐
+  │  DenyPutImage 语句                       │
+  │  Condition: ArnNotEquals                │
+  │    CodeBuild Role ARN → 条件为false      │
+  │    → Deny 不生效 → 允许推送 ✅           │
+  └─────────────────────────────────────────┘
+\end{verbatim}
+\end{infobox}
+
+% ============================================================
+\section{常见错误与排查}
+% ============================================================
+
+\begin{enumerate}[leftmargin=*, label=\textbf{Q\arabic*.}]
+
+  \item \textbf{使用了错误的条件键}\\
+  \textit{错误：} 使用 \texttt{aws:PrincipalType} 或 \texttt{aws:userid}\\
+  \textit{正确：} 使用 \texttt{aws:PrincipalArn}，这是按角色 ARN 做精确匹配时最直接、最清晰的全局条件键。
+
+  \item \textbf{ARN 填写不完整}\\
+  \textit{错误：} 只填写角色名 \texttt{codebuild-role}\\
+  \textit{正确：} 必须填写完整 ARN，如 \texttt{arn:aws:iam::123456789:role/codebuild-role}
+
+  \item \textbf{条件运算符选择错误}\\
+  \textit{错误：} 使用 \texttt{ArnEquals}（这会导致只有 CodeBuild 被拒绝）\\
+  \textit{正确：} 使用 \texttt{ArnNotEquals}（排除 CodeBuild，其余全部拒绝）
+
+  \item \textbf{忘记保存策略}\\
+  修改完 JSON 后，必须点击 \textbf{Save} 按钮，否则修改不会生效。
+
+\end{enumerate}
+
+% ============================================================
+\section{总结}
+% ============================================================
+
+\begin{successbox}
+  \textbf{核心要点回顾：}
+  \begin{enumerate}
+    \item ECR 资源策略的 Deny 语句可以通过 \textbf{Condition} 添加例外
+    \item 使用全局条件键 \texttt{aws:PrincipalArn} 匹配请求者的 ARN
+    \item \texttt{ArnNotEquals} + \texttt{Deny} 组合 = ``除了指定 ARN 以外，全部拒绝''
+    \item 修复 CI/CD 流水线权限问题时，\textbf{最小权限原则}是首选方案
+    \item 排查 ECR 推送失败时，需同时检查 \textbf{ECR 资源策略} 和 \textbf{IAM 身份策略}
+  \end{enumerate}
+\end{successbox}
+
+\vspace{1cm}
+\begin{center}
+  \rule{0.4\textwidth}{0.5pt}\\
+  \vspace{0.3cm}
+  {\small AWS Jam Challenge 知识点总结文档}\\
+  {\small 基于 Amazon ECR 资源策略排错场景}
+\end{center}
+
+\end{document}

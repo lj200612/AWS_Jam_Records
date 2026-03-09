@@ -1,0 +1,299 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{tcolorbox}
+\tcbuselibrary{listingsutf8, skins}
+
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+
+% 代码样式定义
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codeframe}{RGB}{200,200,200}
+\definecolor{keyword}{RGB}{0,0,200}
+\definecolor{comment}{RGB}{0,128,0}
+\definecolor{string}{RGB}{163,21,21}
+\definecolor{awsorange}{RGB}{255,153,0}
+\definecolor{awsdark}{RGB}{35,47,62}
+\definecolor{noteblue}{RGB}{232,244,253}
+\definecolor{noteframe}{RGB}{33,150,243}
+\definecolor{warnbg}{RGB}{255,243,224}
+\definecolor{warnframe}{RGB}{255,152,0}
+
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{keyword}\bfseries,
+  commentstyle=\color{comment},
+  stringstyle=\color{string},
+  frame=single,
+  rulecolor=\color{codeframe},
+  breaklines=true,
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=5pt,
+  tabsize=2,
+}
+
+% 页眉页脚
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{awsdark}{\textbf{AWS Jam Challenge}}}
+\fancyhead[R]{\textcolor{awsorange}{\textbf{Task 1 总结}}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{1pt}
+
+% 标题格式
+\titleformat{\section}{\large\bfseries\color{awsdark}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\color{awsdark}}{}{0em}{}
+
+\begin{document}
+
+% 标题页
+\begin{center}
+  {\Huge \textbf{\textcolor{awsdark}{AWS Jam Challenge}}}\\[0.5em]
+  {\Large \textcolor{awsorange}{\rule{10cm}{2pt}}}\\[0.5em]
+  {\LARGE \textbf{Task 1：启用 RDS MySQL 审计日志并导出至 CloudWatch}}\\[1em]
+  {\normalsize \textcolor{gray}{知识点总结 \quad|\quad 操作步骤 \quad|\quad 核心概念}}\\[0.5em]
+  {\normalsize \textcolor{gray}{\today}}
+\end{center}
+
+\vspace{1em}
+\noindent\rule{\textwidth}{0.4pt}
+\vspace{1em}
+
+%-----------------------------------------------
+\section{任务背景}
+%-----------------------------------------------
+
+\begin{tcolorbox}[
+  colback=noteblue,
+  colframe=noteframe,
+  title={\textbf{任务描述}},
+  fonttitle=\bfseries
+]
+Amazon RDS MySQL 实例 \texttt{challenge-node-777} 未启用审计日志（Audit Logging / Option Group），
+导致无法对数据库操作进行追踪与取证。\\
+
+\textbf{目标：}在 RDS MySQL 上启用审计日志（通过 Option Group 配置
+\texttt{MARIADB\_AUDIT\_PLUGIN}），并将审计日志推送至 Amazon CloudWatch。
+\end{tcolorbox}
+
+\vspace{0.5em}
+
+\subsection{涉及服务}
+
+\begin{center}
+\begin{tabular}{>{\bfseries}lll}
+\toprule
+服务名称 & 作用 & 备注 \\
+\midrule
+Amazon RDS MySQL & 数据库实例 & \texttt{challenge-node-777} \\
+Option Group & 插件配置容器 & 承载 \texttt{MARIADB\_AUDIT\_PLUGIN} \\
+MARIADB\_AUDIT\_PLUGIN & 审计插件 & 记录连接与查询事件 \\
+Amazon CloudWatch & 日志存储与查询平台 & 接收审计日志流 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%-----------------------------------------------
+\section{核心知识点}
+%-----------------------------------------------
+
+\subsection{什么是 Option Group？}
+
+Option Group 是 Amazon RDS 的一种配置容器，用于为数据库引擎启用\textbf{额外功能插件}。
+每个 RDS 实例可关联一个 Option Group，通过在其中添加 Option 来扩展数据库能力。
+
+\begin{tcolorbox}[colback=codebg, colframe=codeframe, title=Option Group 关键概念]
+\begin{itemize}[leftmargin=1em]
+  \item 每个 Option Group 绑定特定的\textbf{数据库引擎}和\textbf{版本}（如 MySQL 8.0）
+  \item 一个实例同时只能关联\textbf{一个} Option Group
+  \item 修改 Option Group 后，部分选项需要\textbf{重启实例}才能生效
+  \item AWS 提供的 \texttt{default} Option Group \textbf{不可修改}，需创建自定义 Option Group
+\end{itemize}
+\end{tcolorbox}
+
+\subsection{什么是 MARIADB\_AUDIT\_PLUGIN？}
+
+\texttt{MARIADB\_AUDIT\_PLUGIN} 是 RDS MySQL 支持的审计插件，
+用于记录数据库的\textbf{连接事件}与\textbf{查询事件}，并将日志写入文件或 CloudWatch。
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+参数名 & 说明 & 推荐值 \\
+\midrule
+\texttt{SERVER\_AUDIT\_LOGGING} & 是否开启审计 & \texttt{ON} \\
+\texttt{SERVER\_AUDIT\_EVENTS} & 记录的事件类型 & \texttt{CONNECT, QUERY} \\
+\texttt{SERVER\_AUDIT\_QUERY\_LOG\_LIMIT} & 单条查询日志长度限制（字节）& \texttt{1024} \\
+\texttt{SERVER\_AUDIT\_INCL\_USERS} & 仅审计指定用户（空=全部）& 按需设置 \\
+\texttt{SERVER\_AUDIT\_EXCL\_USERS} & 排除指定用户 & 可排除 \texttt{rdsadmin} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.5em}
+\begin{tcolorbox}[colback=warnbg, colframe=warnframe, title={\textbf{注意}}]
+\texttt{SERVER\_AUDIT\_EVENTS} 需要包含能记录 SQL 文本的事件类型，例如 \texttt{QUERY} 或 \texttt{QUERY\_DML}，才能捕获 DML 操作。\\
+若仅设置 \texttt{CONNECT}，则只记录登录/登出事件，无法记录 SQL 语句。
+\end{tcolorbox}
+
+\subsection{CloudWatch 日志导出}
+
+RDS 支持将以下类型的日志直接推送至 CloudWatch Logs：
+
+\begin{itemize}
+  \item \textbf{Audit log}（审计日志）$\leftarrow$ 本任务目标
+  \item Error log（错误日志）
+  \item General log（通用日志）
+  \item Slow query log（慢查询日志）
+\end{itemize}
+
+日志组命名规则：
+\begin{lstlisting}[language=bash]
+/aws/rds/instance/<实例名>/audit
+# 本任务对应：
+/aws/rds/instance/challenge-node-777/audit
+\end{lstlisting}
+
+%-----------------------------------------------
+\section{操作步骤}
+%-----------------------------------------------
+
+\subsection{Step 1：创建自定义 Option Group}
+
+\begin{enumerate}[leftmargin=2em]
+  \item 登录 \textbf{AWS 管理控制台}，进入 \textbf{RDS} 服务
+  \item 在左侧菜单点击 \textbf{Option groups}
+  \item 点击 \textbf{Create group}，填写以下信息：
+  \begin{itemize}
+    \item \textbf{Name}：自定义名称，如 \texttt{my-audit-option-group}
+    \item \textbf{Description}：描述信息
+    \item \textbf{Engine}：\texttt{MySQL Community}
+    \item \textbf{Major engine version}：与实例版本一致（如 \texttt{8.0}）
+  \end{itemize}
+  \item 点击 \textbf{Create} 完成创建
+\end{enumerate}
+
+\subsection{Step 2：添加 MARIADB\_AUDIT\_PLUGIN 选项}
+
+\begin{enumerate}[leftmargin=2em]
+  \item 进入刚创建的 Option Group，点击 \textbf{Add option}
+  \item 在 \textbf{Option name} 中选择 \texttt{MARIADB\_AUDIT\_PLUGIN}
+  \item 配置关键参数：
+  \begin{itemize}
+    \item \texttt{SERVER\_AUDIT\_LOGGING} = \texttt{ON}
+    \item \texttt{SERVER\_AUDIT\_EVENTS} = \texttt{CONNECT, QUERY}
+    \item \texttt{SERVER\_AUDIT\_QUERY\_LOG\_LIMIT} = \texttt{1024}
+  \end{itemize}
+  \item 点击 \textbf{Add option} 保存
+\end{enumerate}
+
+\subsection{Step 3：将 Option Group 关联到 RDS 实例}
+
+\begin{enumerate}[leftmargin=2em]
+  \item 进入 \textbf{RDS → Databases}，点击实例 \texttt{challenge-node-777}
+  \item 点击右上角 \textbf{Modify}（修改）
+  \item 在 \textbf{Additional configuration} 部分找到 \textbf{Option group}
+  \item 从下拉菜单中选择刚创建的 Option Group
+  \item 继续向下找到 \textbf{Log exports} 部分，勾选 \textbf{Audit log}
+  \item 点击 \textbf{Continue}，选择 \textbf{Apply immediately}（立即应用）
+  \item 点击 \textbf{Modify DB instance} 完成修改
+\end{enumerate}
+
+\begin{tcolorbox}[colback=warnbg, colframe=warnframe, title={\textbf{补充说明}}]
+为 MySQL 添加 \texttt{MARIADB\_AUDIT\_PLUGIN} 后，审计通常会在 Option Group 生效后立即开始，不需要手动重启实例；但 AWS 官方仍提示该变更\textbf{可能造成短暂中断}，生产环境建议安排在维护窗口或低峰时段执行。
+\end{tcolorbox}
+
+\subsection{Step 4：验证日志是否推送至 CloudWatch}
+
+\begin{enumerate}[leftmargin=2em]
+  \item 进入 \textbf{CloudWatch → Logs → Log groups}
+  \item 搜索日志组：
+\begin{lstlisting}[language=bash]
+/aws/rds/instance/challenge-node-777/audit
+\end{lstlisting}
+  \item 若日志组存在且有数据流入，则说明配置成功
+\end{enumerate}
+
+%-----------------------------------------------
+\section{审计日志格式说明}
+%-----------------------------------------------
+
+审计日志每行为 CSV 格式，字段含义如下：
+
+\begin{lstlisting}
+20260309 10:37:00,ip-172-17-5-73,rdsadmin,localhost,8,493,QUERY,mysql,'SELECT 1',0,,
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{cll}
+\toprule
+字段位置 & 字段名 & 示例值 \\
+\midrule
+1 & 时间戳 & \texttt{20260309 10:37:00} \\
+2 & 服务器主机名 & \texttt{ip-172-17-5-73} \\
+3 & \textbf{用户名（USERNAME）} & \texttt{rdsadmin} \\
+4 & 客户端主机 & \texttt{localhost} \\
+5 & 连接 ID & \texttt{8} \\
+6 & 查询 ID & \texttt{493} \\
+7 & 操作类型 & \texttt{QUERY} / \texttt{CONNECT} \\
+8 & 数据库名 & \texttt{mysql} \\
+9 & SQL 语句 & \texttt{'SELECT 1'} \\
+10 & 返回码 & \texttt{0}（成功） \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%-----------------------------------------------
+\section{常见问题排查}
+%-----------------------------------------------
+
+\begin{tcolorbox}[colback=warnbg, colframe=warnframe, title={\textbf{问题1：CloudWatch 日志组中只有 SELECT，没有 UPDATE 记录}}]
+\textbf{原因：}审计日志只记录启用之后的操作，历史操作不会被追溯。\\
+\textbf{解决：}等待攻击行为再次触发，或手动执行一条 UPDATE 语句进行测试。
+\end{tcolorbox}
+
+\vspace{0.5em}
+
+\begin{tcolorbox}[colback=warnbg, colframe=warnframe, title={\textbf{问题2：CloudWatch Insights 查询返回 0 条结果}}]
+\textbf{可能原因：}
+\begin{itemize}
+  \item 时间范围选择过短（默认 1 小时），应调整为更长时间范围
+  \item 选错了日志组，注意区分 \texttt{/audit}、\texttt{/error}、\texttt{/general}
+  \item \texttt{SERVER\_AUDIT\_EVENTS} 未包含 \texttt{QUERY}，导致 DML 未被记录
+\end{itemize}
+\end{tcolorbox}
+
+%-----------------------------------------------
+\section{总结}
+%-----------------------------------------------
+
+\begin{tcolorbox}[colback=noteblue, colframe=noteframe, title={\textbf{Task 1 核心要点}}]
+\begin{enumerate}
+  \item RDS MySQL 默认不开启审计，需通过自定义 \textbf{Option Group} 添加 \texttt{MARIADB\_AUDIT\_PLUGIN} 插件
+  \item 插件的 \texttt{SERVER\_AUDIT\_EVENTS} 至少要包含能记录 SQL 的事件类型（如 \texttt{QUERY} 或 \texttt{QUERY\_DML}）；若只配 \texttt{CONNECT} 则看不到 SQL
+  \item 在 RDS 实例的 \textbf{Modify} 页面同时完成两件事：\\
+  （1）关联自定义 Option Group \quad（2）勾选 Audit log 导出至 CloudWatch
+  \item 日志组路径固定为 \texttt{/aws/rds/instance/<实例名>/audit}
+  \item 审计日志为 CSV 格式，第 3 个字段为 \textbf{用户名}，可用 CloudWatch Insights 解析查询
+\end{enumerate}
+\end{tcolorbox}
+
+\vspace{2em}
+\noindent\rule{\textwidth}{0.4pt}
+\begin{center}
+\textcolor{gray}{\small 本文档基于 AWS Jam Challenge 实操经验整理 \quad|\quad Amazon RDS + CloudWatch}
+\end{center}
+
+\end{document}

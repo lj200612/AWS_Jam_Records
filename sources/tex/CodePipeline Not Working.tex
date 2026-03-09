@@ -1,0 +1,404 @@
+\documentclass[12pt, a4paper]{article}
+
+% ========== 包引入 ==========
+\usepackage[UTF8]{ctex}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{mdframed}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{tabularx}
+
+% ========== 颜色定义 ==========
+\definecolor{awsorange}{RGB}{255, 153, 0}
+\definecolor{awsdark}{RGB}{35, 47, 62}
+\definecolor{codegray}{RGB}{245, 245, 245}
+\definecolor{codeblue}{RGB}{0, 102, 204}
+\definecolor{codered}{RGB}{204, 0, 0}
+\definecolor{codegreen}{RGB}{0, 153, 0}
+\definecolor{noteblue}{RGB}{230, 242, 255}
+\definecolor{noteborder}{RGB}{0, 102, 204}
+\definecolor{warnbg}{RGB}{255, 243, 230}
+\definecolor{warnborder}{RGB}{255, 153, 0}
+
+% ========== 代码样式 ==========
+\lstset{
+  backgroundcolor=\color{codegray},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  framerule=0.5pt,
+  rulecolor=\color{gray!50},
+  xleftmargin=10pt,
+  xrightmargin=10pt,
+  aboveskip=10pt,
+  belowskip=10pt,
+  showstringspaces=false,
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{codeblue}\bfseries,
+}
+
+% ========== 标题样式 ==========
+\titleformat{\section}
+  {\large\bfseries\color{awsdark}}
+  {\thesection}{1em}{}[{\color{awsorange}\titlerule[1.5pt]}]
+
+\titleformat{\subsection}
+  {\normalsize\bfseries\color{awsdark}}
+  {\thesubsection}{1em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{codeblue}}
+  {\thesubsubsection}{1em}{}
+
+% ========== 页眉页脚 ==========
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\color{awsdark}\textbf{AWS Jam 挑战赛题目总结}}
+\fancyhead[R]{\color{awsorange}\textbf{CodePipeline + CloudFormation}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{1pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{awsorange}\leaders\hrule height \headrulewidth\hfill}}
+
+% ========== 注意框 ==========
+\newmdenv[
+  backgroundcolor=noteblue,
+  linecolor=noteborder,
+  linewidth=2pt,
+  leftline=true,
+  rightline=false,
+  topline=false,
+  bottomline=false,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+  innertopmargin=8pt,
+  innerbottommargin=8pt,
+]{notebox}
+
+\newmdenv[
+  backgroundcolor=warnbg,
+  linecolor=warnborder,
+  linewidth=2pt,
+  leftline=true,
+  rightline=false,
+  topline=false,
+  bottomline=false,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+  innertopmargin=8pt,
+  innerbottommargin=8pt,
+]{warnbox}
+
+% ========== 文档开始 ==========
+\begin{document}
+
+% ========== 封面 ==========
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\color{awsorange}\rule{\linewidth}{3pt}}\\[0.5cm]
+  {\Huge\bfseries\color{awsdark} AWS Jam 挑战赛}\\[0.3cm]
+  {\Large\bfseries\color{awsdark} 题目总结与知识点解析}\\[0.3cm]
+  {\color{awsorange}\rule{\linewidth}{3pt}}\\[1.5cm]
+
+  \begin{mdframed}[backgroundcolor=codegray, linecolor=awsorange, linewidth=1.5pt]
+    \centering
+    \vspace{0.5cm}
+    {\large\bfseries 题目名称}\\[0.3cm]
+    {\Large CodePipeline 部署故障排查}\\[0.3cm]
+    {\normalsize 使用服务：CodeCommit \ $\bullet$ \ CodePipeline \ $\bullet$ \ CloudFormation}
+    \vspace{0.5cm}
+  \end{mdframed}
+
+  \vspace{2cm}
+  \begin{tabular}{ll}
+    \textbf{难度} & DevOps 中级 \\[0.3cm]
+    \textbf{涉及服务} & AWS CodePipeline, CodeCommit, CloudFormation \\[0.3cm]
+    \textbf{核心问题} & CloudFormation 模板路径配置错误 \\[0.3cm]
+    \textbf{解决方式} & 修正 Deploy 阶段的 Template 文件路径 \\
+  \end{tabular}
+
+  \vfill
+  {\color{gray}\today}
+\end{titlepage}
+
+% ========== 目录 ==========
+\tableofcontents
+\newpage
+
+% ========== 正文 ==========
+
+\section{题目背景}
+
+贵公司中有人使用 CodePipeline 和 CloudFormation 建立了一条流水线用于部署 AWS 基础设施。该 CodePipeline 包含两个阶段：
+
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{Source 阶段}：连接一个 CodeCommit 存储库，仓库中包含一个 CloudFormation 模板文件。
+  \item \textbf{Deploy 阶段}：使用 Source 阶段获取的模板，部署 CloudFormation 堆栈。
+\end{itemize}
+
+CloudFormation 的部署并未正常进行，Pipeline 处于\textbf{失败（Failed）}状态。你被要求作为 DevOps 顾问来排除并解决该问题。
+
+\subsection{AWS 资源清单}
+
+\begin{tabularx}{\textwidth}{lX}
+  \toprule
+  \textbf{资源类型} & \textbf{说明} \\
+  \midrule
+  CodeCommit 仓库 & 包含 CloudFormation 模板的源代码仓库 \\
+  S3 存储桶 & 存储 CodePipeline 运行过程中的 Artifact（工件） \\
+  IAM 角色 & CodePipeline 执行所需的权限角色 \\
+  CodePipeline & 待修复的 CI/CD 流水线 \\
+  \bottomrule
+\end{tabularx}
+
+\subsection{验收标准}
+
+\begin{itemize}[leftmargin=2em]
+  \item CodePipeline 执行成功完成
+  \item 新的 CloudFormation 堆栈成功部署
+  \item CloudFormation 堆栈名称出现在主堆栈的 Outputs 中
+\end{itemize}
+
+\newpage
+
+\section{故障排查过程}
+
+\subsection{第一步：查看错误信息}
+
+进入 AWS 控制台 → CodePipeline → 点击失败的 Pipeline → 找到失败阶段 → 点击 \textbf{Details}。
+
+\begin{notebox}
+\textbf{错误信息：}
+\begin{lstlisting}
+File [template.yaml] does not exist in artifact [SourceApp]
+\end{lstlisting}
+\end{notebox}
+
+\textbf{错误含义解析：}
+
+\begin{itemize}[leftmargin=2em]
+  \item Deploy 阶段在名为 \texttt{SourceApp} 的 Artifact 中寻找文件 \texttt{template.yaml}
+  \item 该文件在 Artifact 中\textbf{不存在}，导致部署失败
+  \item 根本原因：Pipeline 配置的模板路径与仓库中实际的文件路径不匹配
+\end{itemize}
+
+\subsection{第二步：定位根本原因}
+
+\begin{tabularx}{\textwidth}{lXX}
+  \toprule
+  \textbf{配置项} & \textbf{错误配置} & \textbf{正确配置} \\
+  \midrule
+  文件名 & \texttt{template.yaml} & \texttt{working.template.yaml} \\
+  文件路径 & 根目录 & \texttt{infrastructure-as-code/} 子目录 \\
+  完整路径 & \texttt{template.yaml} & \texttt{infrastructure-as-code/working.template.yaml} \\
+  \bottomrule
+\end{tabularx}
+
+\vspace{0.5cm}
+
+仓库实际目录结构如下：
+
+\begin{lstlisting}
+/  (仓库根目录)
+└── infrastructure-as-code/
+        └── working.template.yaml   <- 实际文件位置
+\end{lstlisting}
+
+\newpage
+
+\section{解决操作步骤}
+
+\begin{warnbox}
+\textbf{重要提示：}在\textbf{本 Jam 环境}中，保存 Pipeline 修改时需要勾选
+"No resource updates needed for this source action change"，否则控制台可能因尝试更新变更检测相关资源而报权限错误。\\
+这不是所有生产环境都必然需要的步骤，而是当前实验权限模型下的特殊约束。
+\end{warnbox}
+
+\vspace{0.5cm}
+
+\begin{enumerate}[leftmargin=2em, label=\textbf{Step \arabic*.}]
+
+  \item 进入 \textbf{AWS 控制台 → CodePipeline}，选择失败的 Pipeline。
+
+  \item 点击右上角 \textbf{Edit（编辑）} 按钮。
+
+  \item 找到 \textbf{DeployTestStack} 阶段，点击 \textbf{Edit stage}。
+
+  \item 点击 \textbf{GenerateChangeSet} Action 旁的编辑图标（铅笔图标）。
+
+  \item 在 \textbf{Template} 部分，将 \textbf{File name} 字段修改为：
+  \begin{lstlisting}
+  infrastructure-as-code/working.template.yaml
+  \end{lstlisting}
+
+  \item 点击 \textbf{Done}（忽略顶部可能出现的 ValidationError 提示）。
+
+  \item 点击 \textbf{DeployTestStack} 阶段的 \textbf{Done}。
+
+  \item 点击顶部 \textbf{Save} 按钮。
+
+  \item 弹出提示框后：
+  \begin{itemize}
+    \item \textbf{勾选} "No resource updates needed for this source action change"
+    \item 点击 \textbf{Save} 确认保存
+  \end{itemize}
+
+  \item 如果 Pipeline 未自动触发，点击 \textbf{Release Change} → 弹窗中点击 \textbf{Release}。
+
+\end{enumerate}
+
+\vspace{0.5cm}
+
+\begin{notebox}
+\textbf{Artifact 路径格式说明：}\\
+在 CodePipeline Deploy 阶段配置 CloudFormation 模板路径时，格式为：
+\begin{lstlisting}
+ArtifactName::相对路径/文件名.yaml
+# 例如：
+SourceApp::infrastructure-as-code/working.template.yaml
+\end{lstlisting}
+路径必须与 CodeCommit 仓库中的实际文件路径\textbf{完全一致}。
+\end{notebox}
+
+\newpage
+
+\section{知识点解析}
+
+\subsection{AWS CodePipeline 概述}
+
+\subsubsection{定义}
+
+AWS CodePipeline 是一项\textbf{全托管的 CI/CD（持续集成/持续交付）服务}，用于自动化代码从提交到部署的完整流程。
+
+\subsubsection{核心概念}
+
+\begin{tabularx}{\textwidth}{lX}
+  \toprule
+  \textbf{概念} & \textbf{说明} \\
+  \midrule
+  Pipeline（流水线） & 由多个阶段组成的自动化工作流 \\
+  Stage（阶段） & 流水线中的一个逻辑步骤，如 Source、Build、Deploy \\
+  Action（动作） & 每个阶段中执行的具体任务 \\
+  Artifact（工件） & 各阶段之间传递数据的"包裹"，存储于 S3 \\
+  \bottomrule
+\end{tabularx}
+
+\subsubsection{典型流水线结构}
+
+\begin{lstlisting}
+Source  -->  Build  -->  Test  -->  Deploy
+ 源码         构建         测试        部署
+(CodeCommit) (CodeBuild) (测试工具) (CloudFormation/ECS)
+\end{lstlisting}
+
+本题的流水线结构（简化版）：
+\begin{lstlisting}
+Source (CodeCommit)  -->  Deploy (CloudFormation)
+\end{lstlisting}
+
+\subsection{CodePipeline 与相关服务的关系}
+
+\begin{tabularx}{\textwidth}{lX}
+  \toprule
+  \textbf{服务} & \textbf{职责} \\
+  \midrule
+  CodeCommit & 代码仓库，类似 GitHub/GitLab \\
+  CodeBuild & 构建和测试代码，类似 Jenkins \\
+  CodeDeploy & 将应用部署到 EC2、ECS 等计算资源 \\
+  CloudFormation & 基础设施即代码，自动化创建 AWS 资源 \\
+  \textbf{CodePipeline} & \textbf{编排器：串联上述服务，按顺序自动触发} \\
+  \bottomrule
+\end{tabularx}
+
+\begin{notebox}
+\textbf{关键理解：} CodePipeline 本身不执行具体任务，它是一个\textbf{调度器和编排器}，负责按顺序触发各阶段的工具并在它们之间传递 Artifact。
+\end{notebox}
+
+\subsection{CloudFormation 在 CodePipeline 中的使用}
+
+当 Deploy 阶段使用 CloudFormation 时，常见的 Action 类型有：
+
+\begin{tabularx}{\textwidth}{lX}
+  \toprule
+  \textbf{Action 类型} & \textbf{说明} \\
+  \midrule
+  Create or Update Stack & 直接创建或更新 CloudFormation 堆栈 \\
+  Create Change Set & 生成变更集（本题使用的 GenerateChangeSet） \\
+  Execute Change Set & 执行已生成的变更集 \\
+  Delete Stack & 删除 CloudFormation 堆栈 \\
+  \bottomrule
+\end{tabularx}
+
+\subsection{常见 CodePipeline 失败原因}
+
+\begin{tabularx}{\textwidth}{lXX}
+  \toprule
+  \textbf{失败阶段} & \textbf{常见原因} & \textbf{解决方案} \\
+  \midrule
+  Source & 分支名称错误 & 核对 CodeCommit 实际分支名 \\
+  Source & 仓库访问权限不足 & 检查 IAM 角色权限 \\
+  Deploy & 模板路径错误 & 核对仓库文件实际路径（本题） \\
+  Deploy & IAM 权限不足 & 为 CodePipeline 角色添加 CF 权限 \\
+  Deploy & S3 Artifact 桶跨区域 & 确保桶与 Pipeline 在同一区域 \\
+  \bottomrule
+\end{tabularx}
+
+\newpage
+
+\section{经验总结}
+
+\subsection{排查流程}
+
+\begin{lstlisting}
+Pipeline 报错
+    |
+    v
+查看失败阶段的 Details 错误信息
+    |
+    v
+"File does not exist in artifact"?
+    |
+    v
+去 CodeCommit 查看仓库实际文件结构
+（或通过 S3 Artifact 桶下载 zip 查看）
+    |
+    v
+确认完整相对路径 + 文件名
+    |
+    v
+修改 Deploy 阶段 Template 路径
+    |
+    v
+保存（勾选无需资源更新）-> Release Change
+\end{lstlisting}
+
+\subsection{最佳实践}
+
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{文件命名规范}：CloudFormation 模板使用清晰的命名，避免与默认名称混淆
+  \item \textbf{路径验证}：配置 Pipeline 后，先确认 Source 阶段能成功拉取文件，再调试 Deploy 阶段
+  \item \textbf{权限最小化}：CodePipeline IAM 角色只授予必要权限，遵循最小权限原则
+  \item \textbf{多环境隔离}：为 Dev/Staging/Prod 分别创建独立的 Pipeline，避免相互干扰
+  \item \textbf{变更集审查}：生产环境部署前使用 Change Set 预览变更内容，再执行
+\end{itemize}
+
+\subsection{本题的局限性说明}
+
+\begin{warnbox}
+\textbf{实验环境限制：} 本 Jam 题目限制了 \texttt{codecommit:ListRepositories} 等权限，导致正常的排查路径（浏览仓库文件结构）无法执行。这是实验环境的人为约束；在真实企业环境中，DevOps 工程师通常至少会具备以下之一：
+\begin{itemize}
+  \item CodeCommit 仓库读取权限
+  \item S3 Artifact 桶完整访问权限
+  \item 可向开发团队询问文件结构
+\end{itemize}
+本题的核心考察点是：\textbf{知道在 Pipeline 的哪个位置修改模板路径}，而非独立推导出完整路径。
+\end{warnbox}
+
+\end{document}

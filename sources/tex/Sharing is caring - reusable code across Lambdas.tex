@@ -1,0 +1,318 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[UTF8]{ctex}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{mdframed}
+\usepackage{fontawesome5}
+
+% Page geometry
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+
+% Colors
+\definecolor{awsorange}{RGB}{232, 114, 0}
+\definecolor{codebg}{RGB}{245, 245, 245}
+\definecolor{codeframe}{RGB}{200, 200, 200}
+\definecolor{tipbg}{RGB}{255, 248, 220}
+\definecolor{tipframe}{RGB}{232, 114, 0}
+\definecolor{warnbg}{RGB}{255, 235, 235}
+\definecolor{warnframe}{RGB}{200, 0, 0}
+
+% Listings style
+\lstset{
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeframe},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  showspaces=false,
+  showstringspaces=false,
+  tabsize=2
+}
+
+% Section formatting
+\titleformat{\section}{\large\bfseries\color{awsorange}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\color{awsorange}\textbf{AWS Jam — Lambda Layers}}
+\lhead{\color{gray}\small AWS 实战挑战总结}
+\rfoot{\thepage}
+\lfoot{\color{gray}\small \today}
+
+% Tip box
+\newmdenv[
+  backgroundcolor=tipbg,
+  linecolor=tipframe,
+  linewidth=1.5pt,
+  leftmargin=0pt,
+  rightmargin=0pt,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+  innertopmargin=8pt,
+  innerbottommargin=8pt
+]{tipbox}
+
+% Warning box
+\newmdenv[
+  backgroundcolor=warnbg,
+  linecolor=warnframe,
+  linewidth=1.5pt,
+  leftmargin=0pt,
+  rightmargin=0pt,
+  innerleftmargin=10pt,
+  innerrightmargin=10pt,
+  innertopmargin=8pt,
+  innerbottommargin=8pt
+]{warnbox}
+
+% ==================== DOCUMENT ====================
+\begin{document}
+
+% Title
+\begin{center}
+  {\LARGE \textbf{\color{awsorange} AWS Jam 实战挑战总结}} \\[0.5em]
+  {\large Lambda Layers 共享代码库} \\[0.3em]
+  {\small \color{gray} 服务：AWS Lambda \quad|\quad 难度：入门$\sim$中级}
+\end{center}
+
+\vspace{0.5em}
+\hrule height 1.5pt
+\vspace{1em}
+
+% ==================== OVERVIEW ====================
+\section{挑战概览}
+
+本次 AWS Jam 挑战围绕 \textbf{AWS Lambda Layers（层）} 展开，分为两个任务：
+
+\begin{enumerate}
+  \item \textbf{Task 1}：为两个 Lambda 函数添加共享代码层，解决 \texttt{Runtime.ImportModuleError} 错误。
+  \item \textbf{Task 2}：发布新版本的 Layer，并将其中一个函数升级到新版本。
+\end{enumerate}
+
+\textbf{涉及资源：}
+\begin{itemize}
+  \item 共享库：\texttt{tattooine-common}（存储于 Amazon S3）
+  \item 函数一：\texttt{LabStack-prewarm-\{random\}-ChallengeFunctionOne-\{random\}}
+  \item 函数二：\texttt{LabStack-prewarm-\{random\}-ChallengeFunctionTwo-\{random\}}
+  \item 兼容架构：\texttt{x86\_64}
+  \item 兼容运行时：\texttt{Node.js 22.x}（Task 2 额外支持 \texttt{Node.js 18.x}）
+\end{itemize}
+
+% ==================== TASK 1 ====================
+\section{Task 1：创建 Lambda Layer 并关联函数}
+
+\subsection{背景与问题}
+
+两个 Lambda 函数在部署时未包含依赖库 \texttt{tattooine-common}，导致运行时抛出如下错误：
+
+\begin{lstlisting}
+Runtime.ImportModuleError: Error: Cannot find module 'tattooine-common'
+\end{lstlisting}
+
+库文件已上传至 S3，路径为：
+
+\begin{lstlisting}
+s3://aws-jam-challenge-resources-{REGION}/lambda-layers-shared-code/task-one/layer-task-one.zip
+\end{lstlisting}
+
+\subsection{解决方案：使用 Lambda Layers}
+
+Lambda Layers 是 Lambda 提供的共享机制，用于在多个函数间复用依赖库、自定义运行时或配置文件。实际操作时，可在函数详情页的 \textbf{Layers} 区域进行关联。
+
+\subsection{操作步骤}
+
+\textbf{步骤一：创建 Lambda Layer}
+
+\begin{enumerate}
+  \item 进入 AWS Lambda 控制台，点击左侧菜单 \textbf{Layers}
+  \item 点击右上角 \textbf{Create layer}
+  \item 填写配置：
+    \begin{itemize}
+      \item \textbf{Name}：\texttt{tattooine-common}
+      \item \textbf{Upload method}：选择 \textit{Upload a file from Amazon S3}
+      \item \textbf{S3 link URL}：填入上方 S3 路径（替换 \texttt{\{REGION\}}）
+      \item \textbf{Compatible architectures}：勾选 \texttt{x86\_64}
+      \item \textbf{Compatible runtimes}：选择 \texttt{Node.js 22.x}
+    \end{itemize}
+  \item 点击 \textbf{Create}，完成 Layer \textbf{Version 1} 的创建
+\end{enumerate}
+
+\textbf{步骤二：将 Layer 关联到两个函数}（分别对 FunctionOne 和 FunctionTwo 执行）
+
+\begin{enumerate}
+  \item 进入 \textbf{Lambda → Functions}，打开目标函数
+  \item 向下滚动至 \textbf{Layers} 区域，点击 \textbf{Add a layer}
+  \item 选择 \textbf{Custom layers} → 选择 \texttt{tattooine-common} → 选择 \textbf{Version 1}
+  \item 点击 \textbf{Add} 保存
+\end{enumerate}
+
+\subsection{原理说明}
+
+Layer 被关联后，Lambda 执行环境会自动将其内容解压至 \texttt{/opt/} 目录：
+
+\begin{lstlisting}
+/opt/
+  └── nodejs/
+        └── node_modules/
+              └── tattooine-common/   ← 函数可直接 import
+\end{lstlisting}
+
+函数代码无需修改，\texttt{require('tattooine-common')} 即可正常导入。
+
+% ==================== TASK 2 ====================
+\section{Task 2：发布 Layer 新版本并灰度升级}
+
+\subsection{背景与问题}
+
+\texttt{tattooine-common} 发布了新版本，新库已上传至 S3：
+
+\begin{lstlisting}
+s3://aws-jam-challenge-resources-{REGION}/lambda-layers-shared-code/task-two/layer-task-two.zip
+\end{lstlisting}
+
+需要先在 \textbf{一个函数} 上验证新版本，另一个函数暂不升级。
+
+\subsection{核心概念：Layer 版本不可变性}
+
+\begin{tipbox}
+\textbf{关键知识点}：Lambda Layer 的每个版本是\textbf{不可变的（Immutable）}。一旦创建，无法修改其内容。要更新 Layer，必须发布一个\textbf{新版本}，每次发布版本号自动递增。
+\end{tipbox}
+
+\subsection{操作步骤}
+
+\textbf{步骤一：在已有 Layer 上发布新版本}
+
+\begin{enumerate}
+  \item 进入 Lambda 控制台 → \textbf{Layers}，找到 \texttt{tattooine-common}
+  \item 点击进入该 Layer 详情页
+  \item 点击右上角 \textbf{Create version}
+  \item 填写配置：
+    \begin{itemize}
+      \item \textbf{Description}：\texttt{v2 - new release}（可选）
+      \item \textbf{S3 link URL}：填入 task-two 的 S3 路径
+      \item \textbf{Compatible architectures}：\texttt{x86\_64}
+      \item \textbf{Compatible runtimes}：\texttt{Node.js 22.x} 和 \texttt{Node.js 18.x}
+    \end{itemize}
+  \item 点击 \textbf{Create}，生成 \textbf{Version 2}
+\end{enumerate}
+
+\textbf{步骤二：更新 FunctionOne 到 Version 2}
+
+\begin{enumerate}
+  \item 打开 \texttt{ChallengeFunctionOne}，进入 \textbf{Layers} 区域
+  \item 点击 \textbf{Edit}，先\textbf{删除}已关联的 Version 1（点击旁边的删除按钮）
+  \item 再点击 \textbf{Add a layer} → Custom layers → \texttt{tattooine-common} → \textbf{Version 2}
+  \item 点击 \textbf{Save}
+\end{enumerate}
+
+\begin{warnbox}
+\textbf{注意}：同一个 Layer 的不同版本\textbf{不能同时}关联到同一个函数。若不先移除旧版本，直接添加新版本会报错：\\
+\texttt{Two different versions of the same layer are not allowed to be referenced in the same function.}\\
+正确做法是：\textbf{先删除旧版本，再添加新版本}。
+\end{warnbox}
+
+\textbf{FunctionTwo} 保持关联 Version 1，实现灰度验证。
+
+% ==================== KNOWLEDGE ====================
+\section{核心知识点汇总}
+
+\subsection{什么是 Lambda Layers？}
+
+Lambda Layers 是一种将\textbf{依赖库、自定义运行时、配置或数据文件}与函数代码分离的机制：
+
+\begin{itemize}
+  \item 避免每个函数重复打包相同依赖，减小部署包体积
+  \item 多个函数可共享同一个 Layer，统一管理依赖版本
+  \item 最多可为一个函数关联 \textbf{5 个} Layer
+  \item 所有 Layer 内容合并后解压到执行环境的 \texttt{/opt/} 路径下
+  \item Layer 仅适用于\textbf{.zip 包部署}的 Lambda 函数；容器镜像函数不使用 Layer 机制
+\end{itemize}
+
+\subsection{Layer 版本管理}
+
+\begin{center}
+\begin{tabular}{>{\bfseries}p{3.5cm} p{9cm}}
+\toprule
+特性 & 说明 \\
+\midrule
+版本不可变 & 已发布的版本内容无法修改，只能新建版本 \\
+版本号递增 & 每次 Create version，版本号自动 +1（如 v1 → v2 → v3） \\
+ARN 唯一标识 & 每个版本有独立的 ARN，格式为 \texttt{arn:aws:lambda:\{region\}:\{account\}:layer:\{name\}:\{version\}} \\
+函数固定版本 & 函数不会自动跟随 Layer 更新，需手动修改关联的版本号 \\
+旧版本不删除 & 发布新版本后旧版本继续存在，不影响关联了旧版本的函数 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Layer 目录结构（Node.js）}
+
+\begin{lstlisting}
+layer.zip
+  └── nodejs/
+        └── node_modules/
+              └── your-library/
+                    ├── index.js
+                    └── package.json
+\end{lstlisting}
+
+Lambda 会将此结构解压到 \texttt{/opt/}。对于 Node.js，常见可用路径包括：
+
+\begin{itemize}
+  \item \texttt{/opt/nodejs/node\_modules}
+  \item \texttt{/opt/nodejs/node18/node\_modules}
+  \item \texttt{/opt/nodejs/node20/node\_modules}
+  \item \texttt{/opt/nodejs/node22/node\_modules}
+\end{itemize}
+
+因此，通用的 \texttt{nodejs/node\_modules} 结构通常最方便；若需要按运行时版本细分，也可使用对应的 \texttt{nodeXX} 子目录。
+
+\subsection{灰度发布策略}
+
+通过 Layer 版本可实现\textbf{分批升级}：
+
+\begin{enumerate}
+  \item 发布新 Layer 版本
+  \item 仅将测试函数切换到新版本
+  \item 验证无误后，再逐步更新其他函数
+\end{enumerate}
+
+这与软件发布中的\textbf{金丝雀发布（Canary Release）}思路一致。
+
+% ==================== SUMMARY ====================
+\section{错误排查速查}
+
+\begin{center}
+\begin{tabular}{p{5.5cm} p{7.5cm}}
+\toprule
+\textbf{错误信息} & \textbf{原因与解决方法} \\
+\midrule
+\texttt{Runtime.ImportModuleError} & 函数缺少依赖库。创建 Lambda Layer 并关联到函数。 \\
+\addlinespace
+\texttt{Two different versions of the same layer are not allowed...} & 同一 Layer 的两个版本同时关联到同一函数。先删除旧版本，再添加新版本。 \\
+\addlinespace
+\texttt{Layer content is invalid} & Layer zip 包目录结构不符合规范。检查 \texttt{nodejs/node\_modules/} 路径是否正确。 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{2em}
+\hrule
+\vspace{0.5em}
+\begin{center}
+\small\color{gray}
+本文档整理自 AWS Jam 实战挑战 \textbf{Lambda Layers Shared Code} 系列题目 \quad|\quad 编写于 \today
+\end{center}
+
+\end{document}

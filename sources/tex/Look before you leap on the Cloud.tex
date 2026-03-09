@@ -1,0 +1,529 @@
+\documentclass[12pt, a4paper]{article}
+
+% ---- Packages ----
+\usepackage[UTF8]{ctex}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\usepackage{fontawesome5}
+\usepackage{amssymb}
+
+% ---- Page Style ----
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{AWS Jam 题目总结}
+\lhead{AWS 安全与网络实践}
+\cfoot{\thepage}
+
+% ---- Colors ----
+\definecolor{awsorange}{RGB}{255, 153, 0}
+\definecolor{awsdark}{RGB}{35, 47, 62}
+\definecolor{codeblue}{RGB}{0, 87, 163}
+\definecolor{codebg}{RGB}{245, 247, 250}
+\definecolor{successgreen}{RGB}{40, 167, 69}
+\definecolor{errorred}{RGB}{220, 53, 69}
+\definecolor{warningyellow}{RGB}{255, 193, 7}
+
+% ---- Code Listing Style ----
+\lstdefinestyle{jsonStyle}{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    captionpos=b,
+    commentstyle=\color{gray},
+    frame=single,
+    rulecolor=\color{gray!40},
+    keywordstyle=\color{codeblue}\bfseries,
+    stringstyle=\color{successgreen},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    tabsize=2,
+    showstringspaces=false,
+}
+
+\lstset{style=jsonStyle}
+
+\lstdefinelanguage{json}{
+    basicstyle=\ttfamily\small,
+    showstringspaces=false,
+    breaklines=true
+}
+
+\lstdefinelanguage{yaml}{
+    basicstyle=\ttfamily\small,
+    showstringspaces=false,
+    breaklines=true
+}
+
+% ---- tcolorbox Styles ----
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{keypoint}{
+    colback=awsorange!10,
+    colframe=awsorange,
+    title={\faLightbulb\quad 核心知识点},
+    fonttitle=\bfseries,
+    breakable
+}
+
+\newtcolorbox{solution}{
+    colback=successgreen!8,
+    colframe=successgreen,
+    title={\faCheckCircle\quad 解决方案},
+    fonttitle=\bfseries,
+    breakable
+}
+
+\newtcolorbox{rootcause}{
+    colback=errorred!8,
+    colframe=errorred,
+    title={\faExclamationTriangle\quad 根本原因},
+    fonttitle=\bfseries,
+    breakable
+}
+
+% ---- Title Formatting ----
+\titleformat{\section}[block]
+  {\Large\bfseries\color{awsdark}}
+  {\thesection}{1em}{}[{\titlerule[0.8pt]}]
+
+\titleformat{\subsection}[block]
+  {\large\bfseries\color{codeblue}}
+  {\thesubsection}{1em}{}
+
+% ---- Document ----
+\begin{document}
+
+% ---- Title Page ----
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\Huge\bfseries\color{awsdark} AWS Jam 实战题目总结\par}
+    \vspace{0.5cm}
+    {\Large\color{gray} 网络、权限与安全专题\par}
+    \vspace{2cm}
+    \begin{tcolorbox}[colback=awsorange!15, colframe=awsorange, width=0.8\textwidth]
+        \centering
+        本文档汇总了四道 AWS Jam 实战题目的\\
+        \textbf{问题背景、根本原因、操作步骤与知识点}，\\
+        适用于 AWS 认证备考与实战参考。
+    \end{tcolorbox}
+    \vspace{2cm}
+    \begin{tabular}{ll}
+        \textbf{涉及服务} & Amazon VPC, S3, IAM, KMS, Lambda \\
+        \textbf{难度} & 中级 \\
+        \textbf{类别} & 网络 / 权限 / 安全 \\
+    \end{tabular}
+    \vfill
+    {\color{gray}\today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% =============================================================
+\section{题目一：VPC Lambda 无法访问互联网}
+% =============================================================
+
+\subsection{背景}
+
+开发了一个 AWS Lambda 函数，需要同时访问：
+\begin{itemize}
+    \item 互联网资源（\texttt{http://example.com}）
+    \item VPC 内私有子网上 EC2 实例的 Web 服务
+\end{itemize}
+
+函数配置为 VPC Lambda，部署后执行成功但 CloudWatch Logs 出现网络错误。
+
+\subsection{根本原因}
+
+\begin{rootcause}
+Lambda 被放置在\textbf{公有子网（Public Subnet）}中。
+
+虽然公有子网的路由表指向 Internet Gateway（IGW），但 \textbf{Lambda ENI 永远不会被分配公网 IP}，IGW 找不到对应的公网 IP 映射，导致出站流量被丢弃。
+\end{rootcause}
+
+\subsubsection{核心原理：IGW 的工作机制}
+
+Internet Gateway 进行的是 \textbf{一对一 NAT}，要求资源拥有公网 IP：
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{资源类型} & \textbf{公有子网中能获得公网 IP} & \textbf{能否访问互联网} \\
+\midrule
+EC2 实例 & \checkmark（自动分配或 EIP）& \checkmark \\
+NAT Gateway & \checkmark（必须绑定 EIP）& \checkmark \\
+\textbf{Lambda ENI} & \textbf{\texttimes（AWS 不分配）}& \textbf{\texttimes} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{私有子网为何可行}
+
+私有子网路由表指向 NAT Gateway，NAT Gateway 自身持有 EIP，代替 Lambda 访问互联网：
+
+\begin{lstlisting}[language=bash, caption=私有子网路由表示例]
+# 私有子网路由表（正确）
+Destination     Target
+10.0.0.0/16    local
+0.0.0.0/0      nat-xxxxxxxx   <- NAT Gateway，有公网IP
+
+# 公有子网路由表（对Lambda无效）
+Destination     Target
+10.0.0.0/16    local
+0.0.0.0/0      igw-xxxxxxxx   <- IGW，Lambda ENI无公网IP
+\end{lstlisting}
+
+\subsection{操作步骤}
+
+\begin{solution}
+\begin{enumerate}
+    \item 打开 \textbf{CloudWatch Logs}，确认 \texttt{/aws/lambda/MyFunction} 中存在连接超时等网络错误。
+    \item 打开 \textbf{Lambda Console} → 选择 \texttt{MyFunction} → \textbf{Configuration → VPC}。
+    \item 点击 \textbf{Edit}，将子网从\textbf{公有子网}更换为\textbf{私有子网}。
+    \begin{itemize}
+        \item 私有子网特征：路由表中 \texttt{0.0.0.0/0 → nat-*}
+        \item 公有子网特征：路由表中 \texttt{0.0.0.0/0 → igw-*}
+    \end{itemize}
+    \item 点击 \textbf{Save}，重新执行函数并验证日志无报错。
+\end{enumerate}
+\end{solution}
+
+\begin{keypoint}
+\textbf{VPC Lambda 网络访问规则：}
+\begin{itemize}
+    \item Lambda 放在\textbf{私有子网} + 私有子网有 NAT Gateway 路由 → 可访问互联网 \& 私有资源
+    \item Lambda 放在\textbf{公有子网} → 只能访问私有资源，\textbf{无法访问互联网}
+    \item 安全组需放行出站 80/443 端口（互联网）及 EC2 对应端口
+\end{itemize}
+\end{keypoint}
+
+\newpage
+% =============================================================
+\section{题目二：Lambda 无法读写 S3 对象}
+% =============================================================
+
+\subsection{背景}
+
+通过 CloudFormation 创建了 S3 Bucket 和 IAM Role，用于同账号的 Lambda 函数进行 CRUD 操作。应用团队反馈 Lambda 无法对 Bucket 进行任何读写操作。
+
+\subsection{根本原因}
+
+\begin{rootcause}
+IAM Policy 中，对象级操作的 \texttt{Resource} ARN \textbf{缺少 \texttt{/*} 后缀}。
+
+S3 ARN 在 IAM 中具有两种语义，对象级操作必须使用 \texttt{arn:aws:s3:::bucket-name/*} 才能生效。
+\end{rootcause}
+
+\subsubsection{S3 ARN 两种语义对照}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{ARN 格式} & \textbf{代表含义} & \textbf{对应操作} \\
+\midrule
+\texttt{arn:aws:s3:::my-bucket} & 桶本身 & \texttt{s3:ListBucket} 等桶级操作 \\
+\texttt{arn:aws:s3:::my-bucket/*} & 桶内所有对象 & \texttt{s3:GetObject}、\texttt{s3:PutObject} 等 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{错误的 IAM Policy}
+
+\begin{lstlisting}[language=json, caption=错误配置（缺少 /*）]
+{
+  "Effect": "Allow",
+  "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+  "Resource": "arn:aws:s3:::my-bucket"
+}
+\end{lstlisting}
+
+\subsubsection{正确的 IAM Policy}
+
+\begin{lstlisting}[language=json, caption=正确配置]
+{
+  "Effect": "Allow",
+  "Action": ["s3:ListBucket"],
+  "Resource": "arn:aws:s3:::my-bucket"
+},
+{
+  "Effect": "Allow",
+  "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+  "Resource": "arn:aws:s3:::my-bucket/*"
+}
+\end{lstlisting}
+
+\subsection{操作步骤}
+
+\begin{solution}
+\begin{enumerate}
+    \item 打开 \textbf{IAM Console} → \textbf{Roles} → 找到目标 Role。
+    \item 检查 \textbf{Trust relationships}，确认 \texttt{lambda.amazonaws.com} 为信任主体。
+    \item 展开 \textbf{Permissions} 中的自定义 Policy，找到对象级操作语句。
+    \item 将 \texttt{Resource} 的值从 \texttt{arn:aws:s3:::bucket-name} 修改为 \texttt{arn:aws:s3:::bucket-name/*}。
+    \item 保存后重新测试 Lambda 函数。
+\end{enumerate}
+\end{solution}
+
+\subsubsection{CloudFormation 正确写法}
+
+\begin{lstlisting}[language=yaml, caption=CloudFormation IAM Policy 正确示例]
+- Effect: Allow
+  Action:
+    - s3:ListBucket
+  Resource:
+    - !GetAtt MyBucket.Arn           # arn:aws:s3:::my-bucket
+
+- Effect: Allow
+  Action:
+    - s3:GetObject
+    - s3:PutObject
+    - s3:DeleteObject
+  Resource:
+    - !Sub "${MyBucket.Arn}/*"       # arn:aws:s3:::my-bucket/*
+\end{lstlisting}
+
+\begin{keypoint}
+\textbf{口诀：桶操作用桶 ARN，对象操作必须加 \texttt{/*}}
+
+IAM Policy 还需注意 Trust Policy 中服务主体正确性：
+\begin{itemize}
+    \item Lambda 使用的 Role：\texttt{"Service": "lambda.amazonaws.com"}
+    \item EC2 使用的 Role：\texttt{"Service": "ec2.amazonaws.com"}
+\end{itemize}
+\end{keypoint}
+
+\newpage
+% =============================================================
+\section{题目三：KMS Key 管理员被锁出}
+% =============================================================
+
+\subsection{背景}
+
+作为 AWS 安全管理员，在开发阶段创建了一个 KMS Key。开发阶段结束后，发现无法再管理该 KMS Key，且公司规定 KMS 权限仅通过 Key Policy 管理，不依赖 IAM Policy。
+
+\subsection{根本原因}
+
+\begin{rootcause}
+KMS Key Policy 被修改后，\textbf{当前 IAM Role 未被包含在 Key Administrators 列表中}，导致失去管理权限。
+
+KMS 的权限模型与其他 AWS 服务不同：Key Policy 是\textbf{第一道门}，IAM Policy 必须先被 Key Policy 允许才能生效。
+\end{rootcause}
+
+\subsubsection{KMS 权限模型对比}
+
+\begin{center}
+\begin{tabular}{lp{6cm}p{4cm}}
+\toprule
+\textbf{服务} & \textbf{权限控制方式} & \textbf{说明} \\
+\midrule
+S3、SQS 等 & Identity-based Policy 与 Resource-based Policy 共同评估 & 通常取并集，显式 Deny 优先 \\
+\textbf{KMS} & \textbf{Key Policy 是前提条件，IAM Policy 在其基础上补充} & Key Policy 优先 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{被锁出的 Key Policy 示例}
+
+\begin{lstlisting}[language=json, caption=错误的 Key Policy（管理员角色不含当前用户）]
+{
+  "Sid": "KeyAdmins",
+  "Effect": "Allow",
+  "Principal": {
+    "AWS": "arn:aws:iam::111122223333:role/dev-team-role"
+  },
+  "Action": ["kms:*"],
+  "Resource": "*"
+}
+\end{lstlisting}
+
+\subsection{操作步骤}
+
+\begin{solution}
+\begin{enumerate}
+    \item 在 Console 右上角切换到临时管理员角色 \texttt{jam-aws-tmp-admin-role}（Switch Role）。
+    \item 打开 \textbf{KMS Console} → 找到 \texttt{jam-data-encryption-key}。
+    \item 点击 \textbf{Key policy} 标签页 → 点击 \textbf{Edit}。
+    \item 在 \texttt{KeyAdministrators} 语句的 \texttt{Principal.AWS} 数组中，添加 \texttt{JamTask3SecurityAdminRoleArn}：
+\end{enumerate}
+\end{solution}
+
+\begin{lstlisting}[language=json, caption=修复后的 Key Policy]
+{
+  "Sid": "KeyAdministrators",
+  "Effect": "Allow",
+  "Principal": {
+    "AWS": [
+      "arn:aws:iam::111122223333:role/jam-aws-tmp-admin-role",
+      "arn:aws:iam::111122223333:role/JamTask3SecurityAdminRole"
+    ]
+  },
+  "Action": [
+    "kms:Create*", "kms:Describe*", "kms:Enable*",
+    "kms:List*",   "kms:Put*",      "kms:Update*",
+    "kms:Revoke*", "kms:Disable*",  "kms:Get*",
+    "kms:Delete*", "kms:ScheduleKeyDeletion", "kms:CancelKeyDeletion"
+  ],
+  "Resource": "*"
+}
+\end{lstlisting}
+
+\begin{keypoint}
+\textbf{KMS Key Policy 最佳实践：}
+\begin{itemize}
+    \item 永远在 Key Policy 中保留\textbf{至少一个可靠的管理员角色}。
+    \item 若既未保留账户级入口，也没有其他可管理主体，KMS Key 可能变得 \textbf{unmanageable}；此时可能需要账户紧急管理员介入，严重时需联系 AWS Support。
+    \item 生产环境建议保留至少两个管理员身份，防止单点锁出。
+    \item \texttt{kms:*} 权限不等于 IAM 的管理员权限，必须显式写入 Key Policy。
+\end{itemize}
+\end{keypoint}
+
+\newpage
+% =============================================================
+\section{题目四：S3 跨账号访问控制过于宽松}
+% =============================================================
+
+\subsection{背景}
+
+提供了一个 S3 Bucket 供外部 AWS 账号用户访问数据。要求仅有被分配了特定角色 \texttt{S3CrossAccountAccess} 的用户才能访问，但实际上该外部账号下的\textbf{所有用户}都能访问。
+
+\subsection{根本原因}
+
+\begin{rootcause}
+Bucket Policy 中 \texttt{Principal} 使用了外部账号的 \texttt{root}，这并不表示``只允许对方 Root 用户''，而是把访问权限\textbf{委派给整个外部账号}。随后该账号管理员可以再通过 IAM Policy 将权限授予多个用户或角色，因此超出了``只允许特定角色访问''的要求。
+\end{rootcause}
+
+\subsubsection{Principal 写法的语义差异}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Principal 写法} & \textbf{谁能访问} & \textbf{是否合规} \\
+\midrule
+\texttt{ACCOUNT\_ID:root} & 委派给整个外部账号，由对方账号再授予具体主体 & \texttimes 过于宽松 \\
+\texttt{ACCOUNT\_ID:role/S3CrossAccountAccess} & 仅该特定角色 & \checkmark 推荐 \\
+\texttt{ACCOUNT\_ID:user/specific-user} & 仅该特定用户 & \checkmark 推荐 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{错误的 Bucket Policy}
+
+\begin{lstlisting}[language=json, caption=错误配置（Principal 为 root）]
+{
+  "Effect": "Allow",
+  "Principal": {
+    "AWS": "arn:aws:iam::EXTERNAL_ACCOUNT_ID:root"
+  },
+  "Action": ["s3:GetObject", "s3:ListBucket"],
+  "Resource": [
+    "arn:aws:s3:::your-bucket",
+    "arn:aws:s3:::your-bucket/*"
+  ]
+}
+\end{lstlisting}
+
+\subsubsection{修复后的 Bucket Policy}
+
+\begin{lstlisting}[language=json, caption=正确配置（Principal 精确到角色）]
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowSpecificRoleOnly",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::EXTERNAL_ACCOUNT_ID:role/S3CrossAccountAccess"
+      },
+      "Action": ["s3:GetObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::your-bucket",
+        "arn:aws:s3:::your-bucket/*"
+      ]
+    }
+  ]
+}
+\end{lstlisting}
+
+\subsection{操作步骤}
+
+\begin{solution}
+\begin{enumerate}
+    \item 打开 \textbf{S3 Console} → 找到目标 Bucket。
+    \item 点击 \textbf{Permissions} 标签页 → \textbf{Bucket policy} → 点击 \textbf{Edit}。
+    \item 将 \texttt{Principal} 从：
+    \begin{itemize}
+        \item \texttt{"AWS": "arn:aws:iam::EXTERNAL\_ACCOUNT\_ID:root"}
+    \end{itemize}
+    修改为：
+    \begin{itemize}
+        \item \texttt{"AWS": "arn:aws:iam::EXTERNAL\_ACCOUNT\_ID:role/S3CrossAccountAccess"}
+    \end{itemize}
+    \item 点击 \textbf{Save changes}。
+    \item 验证：外部账号中未获得该角色权限、或未假设该角色的主体应收到 \texttt{Access Denied}；仅 \texttt{S3CrossAccountAccess} 角色可正常访问。
+\end{enumerate}
+\end{solution}
+
+\begin{keypoint}
+\textbf{最小权限原则（Principle of Least Privilege）：}
+\begin{itemize}
+    \item 跨账号访问时，\texttt{Principal} 应精确到具体的 \textbf{Role/User ARN}。
+    \item 避免使用 \texttt{:root} 进行跨账号授权；只有在你\textbf{明确要把权限委派给整个外部账号}时才这样做。
+    \item 对于敏感数据，还应结合 \texttt{Condition} 加入 MFA、IP、VPC Endpoint 等限制条件。
+\end{itemize}
+\end{keypoint}
+
+\newpage
+% =============================================================
+\section{综合知识点汇总}
+% =============================================================
+
+\subsection{AWS 权限控制体系}
+
+\begin{center}
+\begin{tabular}{p{3cm}p{4.5cm}p{4.5cm}}
+\toprule
+\textbf{服务} & \textbf{权限控制层} & \textbf{注意事项} \\
+\midrule
+Lambda + VPC & 子网路由（NAT/IGW）& Lambda ENI 无公网 IP \\
+S3 + IAM & IAM Policy Resource ARN & 对象操作需 \texttt{/*} 后缀 \\
+KMS & Key Policy 优先 & 须显式包含管理员 ARN \\
+S3 跨账号 & Bucket Policy Principal & 避免使用 \texttt{:root} 委派整个账号 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{常见错误速查表}
+
+\begin{center}
+\begin{tabular}{p{4cm}p{4cm}p{4cm}}
+\toprule
+\textbf{症状} & \textbf{常见原因} & \textbf{修复方向} \\
+\midrule
+Lambda 连接超时 & 在公有子网，无 NAT & 改为私有子网 \\
+S3 GetObject 403 & IAM Resource 缺 \texttt{/*} & 补全 ARN 后缀 \\
+KMS 无权限 & Role 不在 Key Policy 中 & 编辑 Key Policy \\
+跨账号访问过宽 & Principal 为 root & 改为精确 Role ARN \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{最佳实践总结}
+
+\begin{enumerate}
+    \item \textbf{VPC Lambda：} 始终将 Lambda 放置在私有子网，通过 NAT Gateway 访问互联网。
+    \item \textbf{IAM Policy：} S3 对象级操作的 \texttt{Resource} 必须使用 \texttt{arn:aws:s3:::bucket/*} 格式。
+    \item \textbf{KMS Key Policy：} 始终保留至少两个管理员 ARN，防止自我锁出。
+    \item \textbf{跨账号权限：} \texttt{Principal} 精确到角色或用户，遵循最小权限原则。
+    \item \textbf{IAM 信任策略：} Lambda 角色的 Trust Policy 中服务主体必须为 \texttt{lambda.amazonaws.com}。
+\end{enumerate}
+
+\end{document}

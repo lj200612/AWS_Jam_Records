@@ -1,0 +1,438 @@
+\documentclass[12pt, a4paper]{article}
+
+% =========================================================
+% 宏包引入
+% =========================================================
+\usepackage[UTF8]{ctex}                     % 中文支持
+\usepackage[margin=2.5cm]{geometry}         % 页边距
+\usepackage{titlesec}                       % 标题格式
+\usepackage{enumitem}                       % 列表格式
+\usepackage{booktabs}                       % 表格美化
+\usepackage{xcolor}                         % 颜色
+\usepackage{listings}                       % 代码高亮
+\usepackage{fancyhdr}                       % 页眉页脚
+\usepackage{tcolorbox}                      % 彩色盒子
+\usepackage{hyperref}                       % 超链接
+\usepackage{array}                          % 表格扩展
+\usepackage{tikz}                           % 绘图
+\usetikzlibrary{shapes, arrows.meta, positioning, fit}
+
+% =========================================================
+% 颜色定义
+% =========================================================
+\definecolor{awsorange}{RGB}{232, 114, 0}
+\definecolor{awsdark}{RGB}{35, 47, 62}
+\definecolor{awsblue}{RGB}{0, 114, 181}
+\definecolor{codegreen}{RGB}{56, 142, 60}
+\definecolor{codegray}{RGB}{128, 128, 128}
+\definecolor{codeblue}{RGB}{25, 118, 210}
+\definecolor{codebg}{RGB}{245, 245, 245}
+
+% =========================================================
+% 代码样式
+% =========================================================
+\lstdefinestyle{awscode}{
+    backgroundcolor=\color{codebg},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codeblue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codegreen},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{awsblue!30},
+    xleftmargin=10pt,
+    xrightmargin=5pt
+}
+\lstset{style=awscode}
+
+% =========================================================
+% tcolorbox 样式
+% =========================================================
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{notebox}[1][]{
+    colback=awsblue!8,
+    colframe=awsblue,
+    fonttitle=\bfseries,
+    title=知识点,
+    #1
+}
+
+\newtcolorbox{warnbox}[1][]{
+    colback=awsorange!8,
+    colframe=awsorange,
+    fonttitle=\bfseries,
+    title=注意,
+    #1
+}
+
+\newtcolorbox{successbox}[1][]{
+    colback=codegreen!8,
+    colframe=codegreen,
+    fonttitle=\bfseries,
+    title=关键结论,
+    #1
+}
+
+% =========================================================
+% 页眉页脚
+% =========================================================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\color{awsdark}\bfseries AWS Jam 挑战题总结}
+\fancyhead[R]{\color{awsorange}\bfseries CodePipeline Lint 集成}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{1.5pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{awsorange}\leaders\hrule height \headrulewidth\hfill}}
+
+% =========================================================
+% 标题格式
+% =========================================================
+\titleformat{\section}{\Large\bfseries\color{awsdark}}{}{0em}{}[\color{awsorange}\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{awsblue}}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{awsdark}}{}{0em}{}
+
+% =========================================================
+% 文档信息
+% =========================================================
+\title{
+    \vspace{-1cm}
+    {\color{awsorange}\rule{\linewidth}{2pt}}\\[0.5em]
+    {\Huge\bfseries\color{awsdark} AWS Jam 挑战题总结}\\[0.3em]
+    {\Large\color{awsblue} CodePipeline 集成代码检查（Lint）}\\[0.3em]
+    {\color{awsorange}\rule{\linewidth}{2pt}}
+}
+\author{}
+\date{}
+
+% =========================================================
+% 正文
+% =========================================================
+\begin{document}
+
+\maketitle
+\thispagestyle{fancy}
+
+% ---------------------------------------------------------
+\section{题目背景}
+% ---------------------------------------------------------
+
+某公司已构建了一个用于生成应用程序代码的 \textbf{AWS CodePipeline}，流水线分为三个顺序阶段：
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=1.8cm,
+    box/.style={rectangle, rounded corners=4pt, draw=awsblue, fill=awsblue!10,
+                minimum width=2.8cm, minimum height=1cm, align=center, font=\bfseries\small},
+    arrow/.style={-{Stealth[scale=1.2]}, thick, color=awsorange}
+]
+    \node[box] (src) {Source\\{\scriptsize CodeCommit}};
+    \node[box, right=of src] (ana) {Analysis\\{\scriptsize 代码分析}};
+    \node[box, right=of ana] (bld) {Build\\{\scriptsize CodeBuild + S3}};
+
+    \draw[arrow] (src) -- (ana);
+    \draw[arrow] (ana) -- (bld);
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{Source（来源）}：CodeCommit 仓库，存储源代码
+    \item \textbf{Analysis（分析）}：CodeBuild 执行代码分析
+    \item \textbf{Build（构建）}：CodeBuild 构建，产物存储至 S3
+\end{itemize}
+
+% ---------------------------------------------------------
+\section{挑战任务}
+% ---------------------------------------------------------
+
+\begin{warnbox}
+    在\textbf{不增加构建时间}的前提下，向现有 CodePipeline 中添加代码检查（Lint）规范强制执行机制。
+\end{warnbox}
+
+\vspace{0.5em}
+\noindent 挑战环境已预先创建的资源：
+
+\begin{itemize}[leftmargin=2em]
+    \item CodeCommit 仓库（含源码和 buildspec 文件）
+    \item S3 存储桶（存储 Pipeline 工件）
+    \item CodePipeline 的 IAM 角色及内联策略
+    \item CodePipeline 实例
+    \item CodeBuild 项目（含预建的 \texttt{LintProject}）
+\end{itemize}
+
+% ---------------------------------------------------------
+\section{核心思路}
+% ---------------------------------------------------------
+
+\subsection{问题分析}
+
+若将 Lint 作为独立的新阶段串行添加，必然增加整体构建时间：
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=1.4cm,
+    box/.style={rectangle, rounded corners=4pt, draw=red!60, fill=red!8,
+                minimum width=2.5cm, minimum height=0.9cm, align=center, font=\small},
+    arrow/.style={-{Stealth}, thick, color=red!60}
+]
+    \node[box] (s) {Source};
+    \node[box, right=of s] (a) {Analysis};
+    \node[box, right=of a] (l) {Lint};
+    \node[box, right=of l] (b) {Build};
+    \draw[arrow] (s)--(a); \draw[arrow] (a)--(l); \draw[arrow] (l)--(b);
+    \node[below=0.2cm of l, color=red, font=\small\bfseries] {增加时间};
+\end{tikzpicture}
+\end{center}
+
+\subsection{解决方案：同阶段并行执行}
+
+将 Lint 动作加入 \textbf{Analysis 阶段}，与现有分析动作\textbf{并行运行}（\texttt{runOrder} 设为相同值）：
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=1.4cm,
+    box/.style={rectangle, rounded corners=4pt, draw=awsblue, fill=awsblue!10,
+                minimum width=2.8cm, minimum height=0.9cm, align=center, font=\small},
+    pbox/.style={rectangle, rounded corners=4pt, draw=codegreen, fill=codegreen!10,
+                minimum width=2.8cm, minimum height=0.9cm, align=center, font=\small},
+    stagebox/.style={rectangle, rounded corners=6pt, draw=awsorange, dashed,
+                     inner sep=8pt},
+    arrow/.style={-{Stealth}, thick, color=awsorange}
+]
+    \node[box] (s) {Source};
+
+    \node[box, right=3cm of s] (a) {CodeAnalysis\\{\scriptsize runOrder: 1}};
+    \node[pbox, below=0.5cm of a] (l) {Lint\\{\scriptsize runOrder: 1}};
+
+    \node[stagebox, fit=(a)(l)] (stage) {};
+    \node[above=0pt of stage, font=\scriptsize\bfseries, color=awsorange] {Analysis 阶段（并行）};
+
+    \node[box, right=3cm of a] (b) {Build};
+
+    \draw[arrow] (s) -- (stage);
+    \draw[arrow] (stage) -- (b);
+    \node[below=0.2cm of l, color=codegreen, font=\small\bfseries] {时间不变};
+\end{tikzpicture}
+\end{center}
+
+\begin{successbox}
+    CodePipeline 同一 Stage 内，\texttt{runOrder} 相同的多个 Action 会\textbf{并行执行}。这意味着耗时不会像串行阶段那样直接相加，但整个 Stage 的完成时间仍取决于\textbf{最慢的那个 Action}。
+\end{successbox}
+
+% ---------------------------------------------------------
+\section{操作步骤}
+% ---------------------------------------------------------
+
+\subsection{第一步：进入 CodePipeline 控制台，编辑流水线}
+
+\begin{enumerate}[leftmargin=2em]
+    \item 打开 AWS Console → CodePipeline → 选择目标 Pipeline
+    \item 点击右上角 \textbf{编辑}
+    \item 找到 \textbf{Analysis 阶段}，点击 \textbf{添加操作}
+\end{enumerate}
+
+\subsection{第二步：配置 Lint 操作（填写编辑操作表单）}
+
+\begin{center}
+\begin{tabular}{>{\bfseries}p{3.5cm} p{5cm} p{5cm}}
+    \toprule
+    字段 & 填写值 & 说明 \\
+    \midrule
+    操作名称 & \texttt{Lint} & 自定义名称 \\
+    操作提供程序 & \texttt{AWS CodeBuild} & 由 CodeBuild 执行 \\
+    区域 & 美国（弗吉尼亚北部） & 与 Pipeline 同区域 \\
+    输入构件 & \texttt{SourceArtifact} & 使用源码作为输入 \\
+    项目名称 & \texttt{LintProject-xxx} & 选择预建的 Lint 项目 \\
+    构建类型 & 单次构建 & 触发一次构建实例 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\begin{warnbox}[title=关键配置]
+    确保 Lint Action 与 CodeAnalysis Action 的 \textbf{运行顺序（Run Order）均为 1}，这是实现并行执行的核心。
+\end{warnbox}
+
+\subsection{第三步：保存并发布更改}
+
+\begin{enumerate}[leftmargin=2em]
+    \item 点击 \textbf{完成} 保存操作配置
+    \item 点击 \textbf{保存} 保存 Pipeline
+    \item 在"发布更改"对话框中，\textbf{勾选"此更新无需资源更新"}
+    \item 点击确认，Pipeline 自动触发执行
+\end{enumerate}
+
+% ---------------------------------------------------------
+\section{知识点详解}
+% ---------------------------------------------------------
+
+\subsection{CodePipeline 核心概念}
+
+\subsubsection{操作提供程序（Action Provider）}
+
+\begin{notebox}
+    CodePipeline 本身只是\textbf{调度器}，不执行具体任务，需要指定提供程序来真正干活。
+\end{notebox}
+
+\begin{center}
+\begin{tabular}{>{\bfseries}p{3.5cm} p{9cm}}
+    \toprule
+    提供程序 & 用途 \\
+    \midrule
+    AWS CodeBuild & 运行构建、测试、Lint 等脚本 \\
+    AWS CodeDeploy & 部署应用到服务器 \\
+    AWS Lambda & 执行自定义无服务器函数 \\
+    Amazon S3 & 上传/下载工件文件 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{输入构件（Input Artifact）}
+
+每个 Stage 会产出一个"工件包裹"，下游 Action 通过输入构件声明使用哪个包裹作为原料：
+
+\begin{lstlisting}[language=bash, caption=构件流转示意]
+Source 阶段  --产出-->  SourceArtifact（源代码压缩包）
+                              |
+                              v
+Analysis/Lint 阶段  <--输入-- SourceArtifact（直接分析源码）
+                              |
+                              v
+Build 阶段  <--输入-- AnalysisOutput（上阶段产出）
+\end{lstlisting}
+
+\subsubsection{构建类型（Build Type）}
+
+\begin{center}
+\begin{tabular}{>{\bfseries}p{3cm} p{5cm} p{4.5cm}}
+    \toprule
+    类型 & 说明 & 适用场景 \\
+    \midrule
+    单次构建 & 启动 1 个 CodeBuild 实例 & 普通构建/Lint \\
+    批处理构建 & 同时启动多个实例 & 多平台/多版本并行测试 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{"此更新无需资源更新"选项}
+
+\subsubsection{为什么不勾会报权限错误？}
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=1.2cm,
+    box/.style={rectangle, rounded corners=4pt, draw=awsblue, fill=awsblue!8,
+                minimum width=5cm, minimum height=0.8cm, align=center, font=\small},
+    arrow/.style={-{Stealth}, thick}
+]
+    \node[box] (u) {当前登录的 IAM 用户/角色};
+    \node[box, below=of u] (r) {尝试修改 CodePipeline IAM 角色};
+    \node[box, below=of r, draw=red!60, fill=red!8] (e) {权限错误\\（无 iam:UpdateRole 权限）};
+    \draw[arrow, color=awsblue] (u)--(r);
+    \draw[arrow, color=red!60] (r)--(e);
+\end{tikzpicture}
+\end{center}
+
+\subsubsection{为什么勾选后正常工作？}
+
+\begin{notebox}
+    挑战环境已\textbf{预先配置好所有 IAM 权限}，无需 AWS 自动更新角色。勾选该选项等于告诉 AWS：\textit{"IAM 已经 OK，跳过角色更新步骤。"}
+\end{notebox}
+
+\begin{lstlisting}[language=bash, caption=两种情况对比]
+# 不勾选（报错）
+Pipeline 保存 -> AWS 尝试更新 IAM 角色 -> 无权限 -> 失败
+
+# 勾选（成功）
+Pipeline 保存 -> 跳过 IAM 更新 -> 直接保存 -> 成功
+\end{lstlisting}
+
+\subsection{CodeBuild 与 Lint 的关系}
+
+\begin{notebox}
+    AWS CodeBuild \textbf{没有内置 Lint 工具}，但提供了标准化的运行环境。通过在 \texttt{buildspec.yml} 中安装和调用 Lint 工具来实现代码检查。
+\end{notebox}
+
+\begin{lstlisting}[language=bash, caption=buildspec.yml 中集成 Lint 示例]
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - pip install pylint --quiet   # 安装 Lint 工具
+
+  pre_build:
+    commands:
+      - echo "Running lint check..."
+      - pylint src/**/*.py           # 执行 Lint
+
+  build:
+    commands:
+      - echo "Building application..."
+
+artifacts:
+  files:
+    - '**/*'
+\end{lstlisting}
+
+常用 Lint 工具对照：
+
+\begin{center}
+\begin{tabular}{>{\bfseries}p{3cm} p{3cm} p{6cm}}
+    \toprule
+    语言 & Lint 工具 & 安装命令 \\
+    \midrule
+    Python & pylint / flake8 & \texttt{pip install pylint} \\
+    JavaScript & ESLint & \texttt{npm install -g eslint} \\
+    Ruby & RuboCop & \texttt{gem install rubocop} \\
+    Go & golint & \texttt{go install golang.org/x/lint} \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+% ---------------------------------------------------------
+\section{成功验证标准}
+% ---------------------------------------------------------
+
+\begin{center}
+\begin{tabular}{>{\bfseries}p{4cm} p{8cm}}
+    \toprule
+    检查项 & 预期结果 \\
+    \midrule
+    Pipeline 结构 & Analysis 阶段显示两个并行 Action \\
+    构建时间 & 与原来相比无明显增加 \\
+    Lint 失败时 & Pipeline 在 Analysis 阶段停止，不进入 Build \\
+    挑战标记 & CodePipeline 成功执行后\textbf{自动}标记挑战完成 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+% ---------------------------------------------------------
+\section{总结}
+% ---------------------------------------------------------
+
+\begin{successbox}
+    \textbf{核心知识点一句话概括：}\\[0.5em]
+    利用 CodePipeline 同一 Stage 内 \texttt{runOrder} 相同的 Action 并行执行的特性，将 Lint 与现有 Analysis 同步运行，\textbf{避免串行增加时间}；若 Lint 不比现有分析更慢，通常不会明显拉长 Stage。\\[0.5em]
+    \textbf{IAM 权限一句话概括：}\\[0.5em]
+    挑战环境预配置了所有权限，勾选"此更新无需资源更新"跳过不必要的 IAM 角色更新，避免因缺少 \texttt{iam:UpdateRole} 权限而报错。
+\end{successbox}
+
+\vspace{2em}
+{\color{awsorange}\rule{\linewidth}{1.5pt}}
+\begin{center}
+    \small\color{codegray} AWS Jam Challenge --- CodePipeline Lint Integration
+\end{center}
+
+\end{document}

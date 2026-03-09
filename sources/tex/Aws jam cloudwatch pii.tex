@@ -1,0 +1,457 @@
+\documentclass[12pt, a4paper]{article}
+
+% ---- Packages ----
+\usepackage[UTF8]{ctex}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{tcolorbox}
+\usepackage{fontawesome5}
+
+% ---- Page Geometry ----
+\geometry{
+  top=2.5cm,
+  bottom=2.5cm,
+  left=2.8cm,
+  right=2.8cm
+}
+
+% ---- Colors ----
+\definecolor{awsorange}{RGB}{232, 119, 34}
+\definecolor{awsdark}{RGB}{35, 47, 62}
+\definecolor{codegray}{RGB}{245, 245, 245}
+\definecolor{codegreen}{RGB}{0, 128, 0}
+\definecolor{warnyellow}{RGB}{255, 193, 7}
+\definecolor{infoblue}{RGB}{13, 110, 253}
+\definecolor{successgreen}{RGB}{25, 135, 84}
+
+% ---- Section Formatting ----
+\titleformat{\section}
+  {\Large\bfseries\color{awsdark}}
+  {\thesection}{1em}{}[\color{awsorange}\titlerule]
+
+\titleformat{\subsection}
+  {\large\bfseries\color{awsdark}}
+  {\thesubsection}{1em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{awsdark}}
+  {\thesubsubsection}{1em}{}
+
+% ---- Code Listings ----
+\lstdefinestyle{logstyle}{
+  backgroundcolor=\color{codegray},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{gray!50},
+  numbers=none,
+  showstringspaces=false,
+  keywordstyle=\color{infoblue}\bfseries,
+  commentstyle=\color{codegreen},
+  stringstyle=\color{awsorange},
+}
+\lstset{style=logstyle}
+
+% ---- tcolorbox styles ----
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{notebox}[1][]{
+  colback=infoblue!8,
+  colframe=infoblue,
+  fonttitle=\bfseries,
+  title={\faInfoCircle\ 说明},
+  #1
+}
+
+\newtcolorbox{warnbox}[1][]{
+  colback=warnyellow!15,
+  colframe=warnyellow!80!black,
+  fonttitle=\bfseries,
+  title={\faExclamationTriangle\ 注意},
+  #1
+}
+
+\newtcolorbox{tipbox}[1][]{
+  colback=successgreen!10,
+  colframe=successgreen,
+  fonttitle=\bfseries,
+  title={\faCheckCircle\ 最佳实践},
+  #1
+}
+
+% ---- Header / Footer ----
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\color{awsdark}\bfseries AWS Jam -- CloudWatch 数据保护实验}
+\fancyhead[R]{\color{awsorange}\bfseries Amazon Web Services}
+\fancyfoot[C]{\color{gray}\thepage}
+\renewcommand{\headrulewidth}{1pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{awsorange}\leaders\hrule height \headrulewidth\hfill}}
+
+% ---- Hyperref ----
+\hypersetup{
+  colorlinks=true,
+  linkcolor=awsdark,
+  urlcolor=infoblue
+}
+
+% ==================================================================
+\begin{document}
+
+% ---- Title Page ----
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\color{awsorange}\rule{\linewidth}{4pt}}\\[0.4cm]
+  {\Huge\bfseries\color{awsdark} AWS Jam 实验总结}\\[0.3cm]
+  {\Large\color{gray} CloudWatch 日志数据保护策略}\\[0.2cm]
+  {\color{awsorange}\rule{\linewidth}{4pt}}\\[1.5cm]
+
+  \begin{tcolorbox}[colback=awsdark, colframe=awsdark, width=0.85\linewidth]
+    \centering\color{white}\large
+    本文档涵盖 AWS CloudWatch 日志组\\
+    PII（个人可识别信息）数据保护的\\
+    题目背景、操作步骤与核心知识点
+  \end{tcolorbox}
+
+  \vfill
+  {\large 服务：Amazon CloudWatch \quad|\quad 难度：入门}\\[0.3cm]
+  {\color{gray}\today}
+\end{titlepage}
+
+% ---- Table of Contents ----
+\tableofcontents
+\newpage
+
+% ==================================================================
+\section{背景与概述}
+
+\subsection{实验背景}
+
+在企业 AWS 环境中，Lambda 函数常将运行日志发送至 Amazon CloudWatch Logs。
+若开发人员在代码中不慎将用户隐私字段（如姓名、邮箱、身份证号、信用卡号等）
+直接打印到日志，将导致 \textbf{PII（Personally Identifiable Information，个人可识别信息）}
+泄露，违反 GDPR、CCPA 等数据合规要求。
+
+\begin{notebox}
+  \textbf{PII} 是指任何能够单独或结合其他信息识别特定个人的数据，包括姓名、
+  电子邮件地址、社会安全号、信用卡号、IP 地址等。
+\end{notebox}
+
+\subsection{实验目标}
+
+本次 AWS Jam 包含两个关联任务，核心目标一致：
+
+\begin{itemize}[leftmargin=2em]
+  \item 识别 CloudWatch 日志组中暴露的 PII 类型
+  \item 为对应日志组配置正确的\textbf{数据保护策略（Data Protection Policy）}
+  \item 使策略生效，对敏感字段进行自动遮蔽（Masking）
+\end{itemize}
+
+\subsection{涉及 AWS 资源}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{资源类型} & \textbf{资源名称} & \textbf{说明} \\
+\midrule
+CloudWatch Log Group & \texttt{/aws/lambda/sensitive-data-01-lambda} & 任务一：已有错误保护策略 \\
+CloudWatch Log Group & \texttt{/aws/lambda/sensitive-data-02-lambda} & 任务二：需先识别 PII 类型 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\newpage
+
+% ==================================================================
+\section{任务一：修正错误的数据保护策略}
+
+\subsection{题目描述}
+
+日志组 \texttt{sensitive-data-01-lambda} 正在记录包含 PII 信息的日志，
+且已配置了\textbf{错误的}数据保护策略，需要将其修正为正确的策略以遮蔽敏感数据。
+
+\subsection{操作步骤}
+
+\subsubsection{步骤 1：导航至目标日志组}
+
+\begin{enumerate}[leftmargin=2em]
+  \item 登录 \textbf{AWS Management Console}
+  \item 搜索并进入 \textbf{CloudWatch} 服务
+  \item 在左侧导航栏选择 \textbf{Logs $\rightarrow$ Log groups}
+  \item 找到并点击 \texttt{/aws/lambda/sensitive-data-01-lambda}
+\end{enumerate}
+
+\subsubsection{步骤 2：进入数据保护配置}
+
+\begin{enumerate}[leftmargin=2em]
+  \item 点击日志组详情页顶部的 \textbf{Data protection} 标签
+  \item 若已有旧策略，选择 \textbf{Edit} 进行修改；否则点击 \textbf{Create data protection policy}
+\end{enumerate}
+
+\subsubsection{步骤 3：选择 PII 数据类型}
+
+在数据类型选择界面，勾选所有需要保护的 PII 类型。控制台会直接显示可选数据类型；若你手写策略 JSON，则需要使用 AWS 官方的 \textbf{managed data identifier ID}。下面列出本题最常见且名称准确的标识符（建议在 Jam 中直接控制台全选，避免漏项）：
+
+\begin{center}
+\begin{longtable}{@{}lll@{}}
+\toprule
+\textbf{类别} & \textbf{数据类型标识符} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\multicolumn{3}{c}{\textit{（续表）}} \\
+\toprule
+\textbf{类别} & \textbf{数据类型标识符} & \textbf{说明} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+金融信息 & \texttt{CreditCardNumber} & 信用卡号 \\
+         & \texttt{CreditCardExpiration} & 信用卡有效期 \\
+         & \texttt{CreditCardSecurityCode} & CVV / Security Code \\
+         & \texttt{BankAccountNumber-US} & 区域相关，手写策略时需带国家代码 \\
+\midrule
+个人身份  & \texttt{Name} & 姓名 \\
+         & \texttt{EmailAddress} & 电子邮件地址 \\
+         & \texttt{Address} & 邮寄地址 \\
+         & \texttt{DateOfBirth} & 出生日期 \\
+         & \texttt{PhoneNumber-US} & 区域相关，电话号需带国家代码 \\
+\midrule
+证件号码  & \texttt{Ssn-US} & 美国社会安全号 (SSN) \\
+         & \texttt{PassportNumber-US} & 美国护照号 \\
+         & \texttt{DriversLicense-US} & 美国驾照号 \\
+         & \texttt{NationalIdentificationNumber-ES} & 国家身份证号示例（需带国家代码） \\
+\midrule
+网络与密钥 & \texttt{IpAddress} & IP 地址 \\
+          & \texttt{AwsSecretKey} & AWS Secret Access Key \\
+          & \texttt{OpenSshPrivateKey} & OpenSSH 私钥 \\
+          & \texttt{PgpPrivateKey} & PGP 私钥 \\
+          & \texttt{PkcsPrivateKey} & PKCS 私钥 \\
+          & \texttt{PuttyPrivateKey} & PuTTY 私钥 \\
+\midrule
+医疗健康  & \texttt{HealthInsuranceCardNumber-EU} & 欧盟健康保险卡号 \\
+         & \texttt{DrugEnforcementAgencyNumber-US} & DEA 药物执法编号 \\
+\end{longtable}
+\end{center}
+
+\begin{warnbox}
+  部分标识符是\textbf{区域相关}的，必须追加 ISO 3166-1 alpha-2 代码，例如
+  \texttt{DriversLicense-US}、\texttt{Ssn-US}、\texttt{BankAccountNumber-US}。\\
+  若直接在控制台勾选，控制台会帮你处理这些细节；若手写 JSON，请以 AWS 官方 managed identifier 列表为准。
+\end{warnbox}
+
+\subsubsection{步骤 4：配置审计目标（可选）}
+
+\begin{itemize}[leftmargin=2em]
+  \item 可选择将审计结果发送到 \textbf{S3 存储桶}、另一个 \textbf{CloudWatch 日志组}，或 \textbf{Kinesis Data Firehose}
+  \item 如无需审计，可跳过此步骤
+\end{itemize}
+
+\subsubsection{步骤 5：保存并验证}
+
+\begin{enumerate}[leftmargin=2em]
+  \item 点击 \textbf{Create / Save} 保存策略
+  \item 返回日志流，查看最新日志，PII 字段应显示为遮蔽格式
+\end{enumerate}
+
+\begin{lstlisting}[caption={策略生效后的日志示例}]
+# 策略生效前
+email: john.doe@example.com  | ssn: 123-45-6789  | ip: 192.168.1.1
+
+# 策略生效后
+email: ********  | ssn: ********  | ip: ********
+\end{lstlisting}
+
+\newpage
+
+% ==================================================================
+\section{任务二：识别 PII 类型并应用保护策略}
+
+\subsection{题目描述}
+
+日志组 \texttt{sensitive-data-02-lambda} 暴露了\textbf{多种} PII 字段，
+需要先\textbf{主动查看日志内容}，识别具体的 PII 类型，
+再针对性地配置数据保护策略以遮蔽全部敏感信息。
+
+\begin{warnbox}
+  本任务与任务一的核心区别在于：需要先\textbf{读取日志内容}进行 PII 类型识别，
+  再制定保护策略，而非直接套用已知配置。
+\end{warnbox}
+
+\subsection{操作步骤}
+
+\subsubsection{步骤 1：查看日志内容，识别 PII}
+
+\begin{enumerate}[leftmargin=2em]
+  \item 进入 \textbf{CloudWatch $\rightarrow$ Log groups}
+  \item 点击 \texttt{/aws/lambda/sensitive-data-02-lambda}
+  \item 点击 \textbf{Log streams}，打开最新的日志流
+  \item 仔细阅读日志内容，记录所有暴露的敏感字段
+\end{enumerate}
+
+\subsubsection{步骤 2：PII 类型映射}
+
+根据日志中看到的内容，对应选择保护类型：
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{日志中出现的内容} & \textbf{对应 PII 类型} \\
+\midrule
+\texttt{user@example.com} 格式字符串 & \texttt{EmailAddress} \\
+\texttt{555-123-4567} 格式号码       & \texttt{PhoneNumber-US} \\
+\texttt{123-45-6789} 格式编号        & \texttt{Ssn-US} \\
+\texttt{192.168.x.x} 格式地址        & \texttt{IpAddress} \\
+\texttt{4111-1111-1111-1111} 格式号码 & \texttt{CreditCardNumber} \\
+人名字符串                            & \texttt{Name} \\
+街道地址字符串                        & \texttt{Address} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{步骤 3：应用数据保护策略}
+
+操作方式与任务一相同，参考第 2.2 节步骤 2--5，
+根据识别结果\textbf{仅勾选对应类型}，或直接全选以确保完整覆盖。
+
+\begin{tipbox}
+  在实验/竞赛场景中，若不确定日志包含哪些 PII 类型，建议\textbf{全选所有类型}，
+  这是最保险的做法，可确保通过任务验证并满足最严格的合规要求。\\[0.3em]
+  在生产环境中，则应仅选择\textbf{实际业务涉及的 PII 类型}，避免过度遮蔽影响日志可用性。
+\end{tipbox}
+
+\newpage
+
+% ==================================================================
+\section{核心知识点}
+
+\subsection{Amazon CloudWatch Logs 数据保护策略}
+
+\subsubsection{功能简介}
+
+CloudWatch Logs 数据保护策略（Data Protection Policy）是 AWS 提供的托管功能，
+可自动检测并遮蔽日志数据中的敏感信息，无需修改应用代码。
+
+\subsubsection{核心特性}
+
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{自动检测}：基于正则模式和机器学习检测 PII
+  \item \textbf{实时遮蔽}：新写入的日志实时进行遮蔽处理
+  \item \textbf{不可追溯}：策略\textbf{仅对新日志}生效，不影响已存储的历史日志
+  \item \textbf{审计支持}：可将检测结果输出到 S3 或其他日志组
+  \item \textbf{权限受控}：具有特定 IAM 权限的用户可查看原始未遮蔽数据
+\end{itemize}
+
+\subsubsection{工作原理}
+
+\begin{center}
+\begin{tabular}{@{}ccc@{}}
+  \textbf{Lambda 函数} & $\longrightarrow$ & \textbf{CloudWatch Logs} \\
+  输出含 PII 的日志 & & 数据保护策略检测并遮蔽 \\
+\end{tabular}
+\end{center}
+
+\begin{lstlisting}[caption={遮蔽前后对比示意}]
+# Lambda 实际输出
+INFO: Processing user john.doe@example.com, SSN: 123-45-6789
+
+# CloudWatch 日志中显示
+INFO: Processing user ********, SSN: ********
+\end{lstlisting}
+
+\subsection{所需 IAM 权限}
+
+\begin{lstlisting}[caption={单个 Log Group 且不配置审计目标时的最小权限（JSON）},
+                   language={}]
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:PutDataProtectionPolicy",
+        "logs:GetDataProtectionPolicy",
+        "logs:DeleteDataProtectionPolicy"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:*"
+    }
+  ]
+}
+\end{lstlisting}
+
+\begin{notebox}
+  上述策略只覆盖\textbf{单个日志组}且\textbf{无审计目标}的最小场景。若实际操作包含以下能力，还需要额外权限：
+\end{notebox}
+
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{配置 CloudWatch Logs 作为审计目标}：还需 \texttt{logs:CreateLogDelivery}、\texttt{logs:PutResourcePolicy}、\texttt{logs:DescribeResourcePolicies}、\texttt{logs:DescribeLogGroups}
+  \item \textbf{配置 S3 作为审计目标}：还需 \texttt{logs:CreateLogDelivery}、\texttt{s3:GetBucketPolicy}、\texttt{s3:PutBucketPolicy}
+  \item \textbf{配置 Firehose 作为审计目标}：还需 \texttt{logs:CreateLogDelivery}，以及目标 Firehose 的相关权限
+  \item \textbf{查看未遮蔽日志}：还需 \texttt{logs:Unmask}
+  \item \textbf{创建账号级策略}：还需 \texttt{logs:PutAccountPolicy}；删除账号级策略则需 \texttt{logs:DeleteAccountPolicy}
+\end{itemize}
+
+\subsection{数据保护策略的局限性}
+
+\begin{center}
+\begin{tabular}{@{}p{5cm}p{9cm}@{}}
+\toprule
+\textbf{局限项} & \textbf{说明} \\
+\midrule
+历史日志 & 策略不追溯处理已存储的历史日志 \\
+日志组类别 & 仅 \textbf{Standard log class} 支持 masking \\
+区域限制 & 需在支持该功能的 AWS 区域内使用 \\
+误遮蔽风险 & 全选 PII 类型可能遮蔽部分非 PII 字段 \\
+查看权限 & 默认只能看到遮蔽后的数据；具备 \texttt{logs:Unmask} 的用户可查看未遮蔽内容 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{数据合规相关法规}
+
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{GDPR}（欧盟通用数据保护条例）：要求对个人数据进行最小化收集和保护
+  \item \textbf{CCPA}（加州消费者隐私法）：赋予消费者对个人数据的知情权和控制权
+  \item \textbf{HIPAA}（健康保险可携带性和责任法案）：规范医疗健康数据的处理方式
+  \item \textbf{PCI DSS}（支付卡行业数据安全标准）：规范信用卡数据的存储与传输
+\end{itemize}
+
+\newpage
+
+% ==================================================================
+\section{操作速查表}
+
+\begin{tipbox}
+  以下为快速参考，适用于考试或竞赛场景中的快速操作。
+\end{tipbox}
+
+\begin{enumerate}[leftmargin=2em, label=\textbf{Step \arabic*.}]
+  \item \textbf{进入 CloudWatch}：Console $\rightarrow$ CloudWatch $\rightarrow$ Log groups
+  \item \textbf{选择日志组}：点击目标 Log Group 名称
+  \item \textbf{查看日志（任务二）}：Log streams $\rightarrow$ 最新流 $\rightarrow$ 识别 PII 字段
+  \item \textbf{创建策略}：Actions $\rightarrow$ Create data protection policy
+  \item \textbf{选择类型}：全选或按需勾选 PII 数据类型
+  \item \textbf{保存}：点击 Create / Save
+  \item \textbf{验证}：返回日志流，确认敏感字段已被星号遮蔽
+\end{enumerate}
+
+\vspace{1cm}
+
+\begin{center}
+{\color{awsorange}\rule{0.5\linewidth}{2pt}}\\[0.5em]
+{\color{gray}\small 本文档根据 AWS Jam 实验场景整理，仅供学习参考。}\\
+{\color{gray}\small Amazon CloudWatch 功能以 AWS 官方文档为准：
+  \href{https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch-logs-data-protection-policies.html}
+       {docs.aws.amazon.com}}
+\end{center}
+
+\end{document}

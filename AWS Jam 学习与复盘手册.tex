@@ -1,0 +1,1360 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{fontspec}
+\usepackage[top=2.4cm,bottom=2.7cm,left=2.45cm,right=2.45cm]{geometry}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{lastpage}
+\usepackage{listings}
+\usepackage{longtable}
+\usepackage{pdfpages}
+\usepackage{setspace}
+\usepackage{tabularx}
+\usepackage{tcolorbox}
+\usepackage{titlesec}
+\usepackage{titletoc}
+\usepackage{xcolor}
+\usepackage{amssymb}
+
+\tcbuselibrary{skins, breakable}
+
+\IfFontExistsTF{Palatino Linotype}
+  {\setmainfont{Palatino Linotype}}
+  {\setmainfont{TeX Gyre Pagella}}
+\IfFontExistsTF{Segoe UI}
+  {\setsansfont{Segoe UI}}
+  {\setsansfont{TeX Gyre Heros}}
+\IfFontExistsTF{JetBrains Mono}
+  {\setmonofont{JetBrains Mono}}
+  {\setmonofont{Consolas}}
+
+\IfFontExistsTF{Source Han Serif SC}
+  {\setCJKmainfont{Source Han Serif SC}[AutoFakeBold=2.5]}
+  {
+    \IfFontExistsTF{Noto Serif CJK SC}
+      {\setCJKmainfont{Noto Serif CJK SC}[AutoFakeBold=2.5]}
+      {
+        \IfFontExistsTF{Songti SC}
+          {\setCJKmainfont{Songti SC}[AutoFakeBold=2.5]}
+          {
+            \IfFontExistsTF{SimSun}
+              {\setCJKmainfont{SimSun}[AutoFakeBold=2.5]}
+              {}
+          }
+      }
+  }
+\IfFontExistsTF{Source Han Sans SC}
+  {\setCJKsansfont{Source Han Sans SC}[AutoFakeBold=2.0]}
+  {
+    \IfFontExistsTF{Microsoft YaHei UI}
+      {\setCJKsansfont{Microsoft YaHei UI}[AutoFakeBold=2.0]}
+      {
+        \IfFontExistsTF{Microsoft YaHei}
+          {\setCJKsansfont{Microsoft YaHei}[AutoFakeBold=2.0]}
+          {}
+      }
+  }
+
+\definecolor{ink}{RGB}{53,49,45}
+\definecolor{terracotta}{RGB}{168,96,74}
+\definecolor{clay}{RGB}{125,84,66}
+\definecolor{linen}{RGB}{249,244,237}
+\definecolor{wheat}{RGB}{241,229,211}
+\definecolor{sage}{RGB}{118,139,121}
+\definecolor{river}{RGB}{92,116,130}
+\definecolor{sun}{RGB}{191,143,85}
+\definecolor{rose}{RGB}{175,108,101}
+\definecolor{paperline}{RGB}{223,214,201}
+\definecolor{codebg}{RGB}{247,244,239}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=terracotta,
+  urlcolor=river,
+  pdftitle={AWS Jam 学习与复盘手册},
+  pdfauthor={Codex}
+}
+
+\setstretch{1.16}
+\setlength{\parskip}{0.48em}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.25}
+\setlist[itemize]{leftmargin=2em, itemsep=0.28em, topsep=0.4em}
+\setlist[enumerate]{leftmargin=2em, itemsep=0.28em, topsep=0.4em}
+\arrayrulecolor{paperline}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  framerule=0.5pt,
+  rulecolor=\color{paperline},
+  showstringspaces=false,
+  columns=fullflexible,
+  xleftmargin=0.6em,
+  xrightmargin=0.2em
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\color{ink}\sffamily\small AWS Jam 学习与复盘手册}
+\fancyhead[R]{\color{terracotta}\sffamily\small\nouppercase{\leftmark}}
+\fancyfoot[C]{\color{clay}\sffamily\small \thepage\ /\ \pageref{LastPage}}
+\setlength{\headheight}{25pt}
+\renewcommand{\headrulewidth}{0.6pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{paperline}\leaders\hrule height \headrulewidth\hfill}}
+\renewcommand{\sectionmark}[1]{\markboth{\thesection\quad #1}{}}
+
+\titleformat{\section}[display]
+  {\normalfont}
+  {\filleft\color{wheat!65!clay}\sffamily\fontsize{42}{42}\selectfont\thesection}
+  {0.15em}
+  {\color{ink}\sffamily\bfseries\fontsize{22}{28}\selectfont}
+  [\vspace{0.55em}\color{paperline}\titlerule]
+
+\titleformat{\subsection}
+  {\large\sffamily\bfseries\color{terracotta}}
+  {\thesubsection}{0.8em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\sffamily\bfseries\color{river}}
+  {\thesubsubsection}{0.8em}{}
+
+\titlespacing*{\section}{0pt}{1.3em}{0.9em}
+\titlespacing*{\subsection}{0pt}{1.15em}{0.45em}
+\titlespacing*{\subsubsection}{0pt}{0.8em}{0.35em}
+
+\renewcommand{\contentsname}{阅读地图}
+\titlecontents{section}
+  [0pt]
+  {\addvspace{0.75em}\sffamily\bfseries\color{ink}}
+  {\contentslabel{2.4em}}
+  {}
+  {\color{paperline}\titlerule*[0.8pc]{.}\color{terracotta}\contentspage}
+
+\titlecontents{subsection}
+  [2.5em]
+  {\small\color{ink}}
+  {\contentslabel{2.5em}}
+  {}
+  {\color{paperline}\titlerule*[0.6pc]{.}\color{clay}\contentspage}
+
+\newcommand{\labelline}[2]{%
+  \par\noindent
+  \begin{tabularx}{\linewidth}{@{}>{\color{terracotta}\sffamily\bfseries}L{2.55cm}Y@{}}
+    #1 & #2
+  \end{tabularx}\par
+}
+\newcommand{\scene}[1]{\labelline{场景}{#1}}
+\newcommand{\entry}[1]{\labelline{控制台入口}{#1}}
+\newcommand{\firstcheck}[1]{\labelline{先判问题域}{#1}}
+\newcommand{\keywords}[1]{\labelline{定位关键词}{#1}}
+\newcommand{\remember}[1]{\labelline{一句带走}{#1}}
+\newcommand{\term}[1]{\textcolor{terracotta}{\textbf{#1}}}
+\newcommand{\flow}{\ensuremath{\rightarrow}}
+\newcommand{\sourcepdfentry}[5]{%
+  \clearpage
+  \subsection{#1}
+  \labelline{对应手册}{#2}
+  \labelline{适合回看}{#3}
+  \labelline{PDF 文件}{\texttt{#4}}
+  \includepdf[pages=-,pagecommand={\thispagestyle{empty}}]{#5}
+}
+
+\newtcolorbox{guidebox}[1][]{
+  enhanced,
+  breakable,
+  before upper={\raggedright},
+  colback=linen,
+  colframe=terracotta!40,
+  colbacktitle=linen,
+  coltitle=terracotta,
+  title={阅读提示},
+  fonttitle=\sffamily\bfseries,
+  boxrule=0.7pt,
+  borderline west={2.6pt}{0pt}{terracotta},
+  arc=1.5pt,
+  left=9pt,
+  right=9pt,
+  top=7pt,
+  bottom=7pt,
+  before skip=0.85em,
+  after skip=0.85em,
+  #1
+}
+
+\newtcolorbox{modulebox}[1][]{
+  enhanced,
+  breakable,
+  before upper={\raggedright},
+  colback=wheat!45,
+  colframe=clay!55,
+  colbacktitle=wheat!45,
+  coltitle=clay,
+  title={模块导读},
+  fonttitle=\sffamily\bfseries,
+  boxrule=0.75pt,
+  borderline west={3pt}{0pt}{clay},
+  arc=1.5pt,
+  left=10pt,
+  right=10pt,
+  top=8pt,
+  bottom=8pt,
+  before skip=0.9em,
+  after skip=0.9em,
+  #1
+}
+
+\newtcolorbox{actionbox}[1][]{
+  enhanced,
+  breakable,
+  before upper={\raggedright},
+  colback=river!8,
+  colframe=river!55,
+  colbacktitle=river!8,
+  coltitle=river!85!black,
+  title={最小修复动作},
+  fonttitle=\sffamily\bfseries,
+  boxrule=0.7pt,
+  borderline west={2.6pt}{0pt}{river!85!black},
+  arc=1.5pt,
+  left=9pt,
+  right=9pt,
+  top=7pt,
+  bottom=7pt,
+  before skip=0.85em,
+  after skip=0.85em,
+  #1
+}
+
+\newtcolorbox{principlebox}[1][]{
+  enhanced,
+  breakable,
+  before upper={\raggedright},
+  colback=sage!10,
+  colframe=sage!55,
+  colbacktitle=sage!10,
+  coltitle=sage!80!black,
+  title={底层原理},
+  fonttitle=\sffamily\bfseries,
+  boxrule=0.7pt,
+  borderline west={2.6pt}{0pt}{sage!80!black},
+  arc=1.5pt,
+  left=9pt,
+  right=9pt,
+  top=7pt,
+  bottom=7pt,
+  before skip=0.85em,
+  after skip=0.85em,
+  #1
+}
+
+\newtcolorbox{pitfallbox}[1][]{
+  enhanced,
+  breakable,
+  before upper={\raggedright},
+  colback=rose!9,
+  colframe=rose!55,
+  colbacktitle=rose!9,
+  coltitle=rose!80!black,
+  title={高频误区},
+  fonttitle=\sffamily\bfseries,
+  boxrule=0.7pt,
+  borderline west={2.6pt}{0pt}{rose!80!black},
+  arc=1.5pt,
+  left=9pt,
+  right=9pt,
+  top=7pt,
+  bottom=7pt,
+  before skip=0.85em,
+  after skip=0.85em,
+  #1
+}
+
+\newtcolorbox{reviewbox}[1][]{
+  enhanced,
+  breakable,
+  before upper={\raggedright},
+  colback=sun!12,
+  colframe=sun!55,
+  colbacktitle=sun!12,
+  coltitle=sun!80!black,
+  title={复习卡片},
+  fonttitle=\sffamily\bfseries,
+  boxrule=0.7pt,
+  borderline west={2.6pt}{0pt}{sun!80!black},
+  arc=1.5pt,
+  left=9pt,
+  right=9pt,
+  top=7pt,
+  bottom=7pt,
+  before skip=0.85em,
+  after skip=0.85em,
+  #1
+}
+
+\newtcolorbox{challengebox}[1][]{
+  enhanced,
+  breakable,
+  before upper={\raggedright},
+  colback=clay!7,
+  colframe=clay!50,
+  colbacktitle=clay!7,
+  coltitle=clay!90!black,
+  title={原题侧栏},
+  fonttitle=\sffamily\bfseries,
+  boxrule=0.7pt,
+  borderline west={2.6pt}{0pt}{clay},
+  arc=1.5pt,
+  left=9pt,
+  right=9pt,
+  top=7pt,
+  bottom=7pt,
+  before skip=0.85em,
+  after skip=0.85em,
+  #1
+}
+
+\newcommand{\challengecard}[4]{%
+\begin{challengebox}
+  \labelline{原题资源}{#1}
+  \labelline{验收信号}{#2}
+  \labelline{原题入口}{#3}
+  \labelline{源文件}{\texttt{#4}}
+\end{challengebox}
+}
+
+\newcommand{\modulepage}[4]{%
+  \clearpage
+  \thispagestyle{empty}
+  \vspace*{1.15cm}
+  {\color{paperline}\rule{\linewidth}{0.8pt}}\par
+  \vspace{0.8cm}
+  {\color{wheat!70!clay}\sffamily\fontsize{52}{52}\selectfont #1}\par
+  \vspace{0.2cm}
+  {\color{ink}\sffamily\bfseries\fontsize{25}{31}\selectfont #2}\par
+  \vspace{0.25cm}
+  {\color{terracotta}\sffamily\large #3}\par
+  \vspace{0.9cm}
+  \begin{modulebox}[title={模块扉页}]
+    #4
+  \end{modulebox}
+  \vfill
+  {\color{paperline}\rule{0.46\linewidth}{1.0pt}}\par
+  \clearpage
+}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{1.55cm}
+  {\color{terracotta}\rule{0.9\linewidth}{1.8pt}}\\[0.55cm]
+  {\sffamily\bfseries\fontsize{26}{32}\selectfont\color{ink} AWS Jam 学习与复盘手册}\\[0.25cm]
+  {\sffamily\Large\color{terracotta} AWS Jam 八题整合索引}\\[0.7cm]
+  {\color{paperline}\rule{0.9\linewidth}{0.8pt}}\\[0.95cm]
+
+  \begin{guidebox}[width=0.9\linewidth,title={使用目标}]
+    \begin{enumerate}
+      \item 看到报错先判断它属于路径、权限、网络、版本还是资源策略问题
+      \item 进入控制台后迅速定位到真正要改的那一项，而不是在界面里盲找
+      \item 赛后把一次次操作回收到服务机制，形成可迁移的做题能力
+    \end{enumerate}
+  \end{guidebox}
+
+  \vspace{0.2cm}
+  \begin{tabularx}{0.9\linewidth}{L{2.8cm}Y}
+    \textbf{覆盖范围} & 8 份 AWS Jam 文档，按主题合并重排 \\[0.25em]
+    \textbf{阅读方式} & 初学建立地图，复盘回收原理，考前速刷查漏 \\[0.25em]
+    \textbf{重点结构} & 模块扉页、原题侧栏、复习卡片、附录索引 \\[0.25em]
+    \textbf{编排日期} & \today \\
+  \end{tabularx}
+
+  \vfill
+  \begin{guidebox}[width=0.82\linewidth,title={阅读顺序}]
+    \begin{enumerate}
+      \item 先看模块扉页和题目地图
+      \item 再看每题的原题侧栏与最小修复动作
+      \item 最后用速查表和附录做考前回看
+    \end{enumerate}
+  \end{guidebox}
+
+  \vfill
+  {\color{clay}\sffamily\large 先分辨问题域，再进入控制台。}\\[0.35cm]
+  {\color{paperline}\rule{0.42\linewidth}{1.2pt}}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{如何使用这本手册}
+
+\subsection{先按这四种方式来读}
+
+\begin{guidebox}
+  \labelline{第一次学}{先看模块导读和题目地图，建立服务之间的连接，不急着背每个按钮。}
+  \labelline{第二次练}{跟着最小修复动作复现，重点记控制台入口和哪一项配置最常出错。}
+  \labelline{赛后复盘}{把每道题压缩成“症状 $\rightarrow$ 根因 $\rightarrow$ 修复 $\rightarrow$ 原理”。}
+  \labelline{考前速刷}{直接看复习卡片、误区清单和症状-原因-修复速查表。}
+\end{guidebox}
+
+\subsection{页面结构怎么读}
+
+\begin{longtable}{L{2.6cm}L{4.1cm}L{6.2cm}}
+\rowcolor{wheat}
+\textbf{版块} & \textbf{你要关注什么} & \textbf{适合什么时候看} \\
+\midrule
+\endfirsthead
+\rowcolor{wheat}
+\textbf{版块} & \textbf{你要关注什么} & \textbf{适合什么时候看} \\
+\midrule
+\endhead
+模块扉页 & 这一组题的判断边界、覆盖源题和先看重点 & 每进入一个新模块时先看 \\
+原题侧栏 & 原题资源名、验收信号、控制台入口和源文件位置 & 刷题、回放原题、二次演练 \\
+最小修复动作 & 现场该怎么改，改之前先看哪类信号 & 刷题、排障、二次演练 \\
+底层原理 & 为什么这题要这样改，它真正考的服务机制是什么 & 赛后复盘、迁移到新题 \\
+高频误区 & 最容易把题做偏、做重、做慢的判断错误 & 考前纠偏、查漏补缺 \\
+复习卡片 & 一句带走的记忆锚点，适合快扫 & 临考前、零散时间回看 \\
+\bottomrule
+\end{longtable}
+
+\subsection{三轮复习法}
+
+\begin{longtable}{@{}L{2.0cm}L{3.9cm}L{4.05cm}L{3.95cm}@{}}
+\rowcolor{wheat}
+\textbf{轮次} & \textbf{关注点} & \textbf{你要做什么} & \textbf{产出} \\
+\midrule
+\endfirsthead
+\rowcolor{wheat}
+\textbf{轮次} & \textbf{关注点} & \textbf{你要做什么} & \textbf{产出} \\
+\midrule
+\endhead
+第一轮 & 服务关系与题型分类 & 识别题目属于数据库、Serverless、DevOps 还是安全治理 & 一张题目地图 \\
+第二轮 & 控制台入口与最小修复动作 & 只记“在哪改”和“改哪一项”，先别背长段概念 & 一份操作清单 \\
+第三轮 & 现象与原理绑定 & 把每个题目压缩成“症状 $\rightarrow$ 根因 $\rightarrow$ 修复 $\rightarrow$ 原理” & 一套复习卡片 \\
+\bottomrule
+\end{longtable}
+
+\subsection{AWS Jam 排障心法}
+
+\begin{principlebox}
+  \begin{enumerate}
+    \item 先看原始报错，不要先猜，更不要先大改。
+    \item 先判问题域：\term{路径}、\term{权限}、\term{网络}、\term{版本/兼容性}、\term{资源策略}、\term{Endpoint}、\term{生命周期}。
+    \item 只改最小必要项，避免把题目从“修配置”做成“重建环境”。
+    \item 每改完一次都回到验证信号，例如 Pipeline 状态、日志是否有新数据、角色是否恢复访问。
+    \item 赛后必须把动作上升为原理，否则下次你只会记住 UI，不会记住机制。
+  \end{enumerate}
+\end{principlebox}
+
+\subsection{七类高频问题域}
+
+\begin{longtable}{L{2.2cm}L{3.5cm}L{3.9cm}L{3.9cm}}
+\rowcolor{wheat}
+\textbf{问题域} & \textbf{第一眼信号} & \textbf{先查什么} & \textbf{典型题型} \\
+\midrule
+\endfirsthead
+\rowcolor{wheat}
+\textbf{问题域} & \textbf{第一眼信号} & \textbf{先查什么} & \textbf{典型题型} \\
+\midrule
+\endhead
+路径 & “file not found”“template not exist” & Artifact 名称、相对路径、工作目录 & CodePipeline 模板找不到 \\
+权限 & 403、AccessDenied、被锁出 & 身份策略、资源策略、Trust Policy & S3 访问、KMS 管理、ECR 推送 \\
+网络 & 超时、连接不上公网或私网目标 & 子网类型、路由表、NAT/IGW、Security Group & Lambda 出网、VPC 内部访问 \\
+版本/兼容性 & 控制台里没有可选项、运行时报兼容错误 & 引擎版本、架构支持矩阵、运行时 & Graviton、Layer 兼容性 \\
+资源策略 & 明明有 Allow 仍被拒绝 & 显式 Deny、Principal、Condition & ECR、S3 跨账号 \\
+Endpoint & 服务看起来切换了，但应用没断或还在走旧入口 & Cluster Endpoint、Reader Endpoint、DNS 抽象层 & Aurora Failover \\
+生命周期 & 恢复、保留、遮蔽是否追溯历史 & 自动清理、版本不可变、新旧数据边界 & RDS 备份、Layer、Logs masking \\
+\bottomrule
+\end{longtable}
+
+\subsection{题目地图}
+
+\begin{longtable}{L{2.7cm}L{4.0cm}L{3.4cm}L{4.2cm}}
+\rowcolor{wheat}
+\textbf{模块} & \textbf{主题} & \textbf{核心服务} & \textbf{复习提示} \\
+\midrule
+\endfirsthead
+\rowcolor{wheat}
+\textbf{模块} & \textbf{主题} & \textbf{核心服务} & \textbf{复习提示} \\
+\midrule
+\endhead
+数据库与数据治理 & RDS 备份、Graviton、Aurora Failover & RDS, Aurora & 先分清“恢复”和“切换” \\
+数据库与数据治理 & RDS 审计日志上云 & RDS, CloudWatch Logs & 记住 Option Group + 审计插件 + Log exports \\
+数据库与数据治理 & CloudWatch PII 遮蔽 & CloudWatch Logs & 记住 managed data identifiers 与 \texttt{logs:Unmask} \\
+Serverless 与网络 & VPC Lambda 出网 & Lambda, VPC, NAT Gateway & 记住 Lambda ENI 没有公网 IP \\
+Serverless 与网络 & Lambda 访问 S3 & Lambda, IAM, S3 & 桶 ARN 和对象 ARN 分开记 \\
+Serverless 与网络 & Lambda Layers & Lambda, S3 & 记住版本不可变、同函数不能挂同一 Layer 两个版本 \\
+DevOps 与交付 & CodePipeline 模板路径故障 & CodePipeline, CodeCommit, CloudFormation & 先看 Artifact 里的相对路径 \\
+DevOps 与交付 & CodePipeline 并行 Lint & CodePipeline, CodeBuild & 同 Stage 同 \texttt{runOrder} 并行 \\
+DevOps 与交付 & ECR 推送被拒 & ECR, IAM, CodeBuild & 看 \texttt{Deny} 是否把服务角色也拦掉了 \\
+安全治理 & KMS 管理员锁出 & KMS, IAM & Key Policy 先于 IAM 生效 \\
+安全治理 & S3 跨账号过宽 & S3, IAM & \texttt{:root} 是把权限委派给整个账号 \\
+\bottomrule
+\end{longtable}
+
+\subsection{八份源题如何映射到本手册}
+
+\begin{longtable}{L{4.0cm}L{2.9cm}L{4.4cm}L{2.7cm}}
+\rowcolor{wheat}
+\textbf{源文件} & \textbf{对应主题} & \textbf{补进来的关键细节} & \textbf{复习时怎么用} \\
+\midrule
+\endfirsthead
+\rowcolor{wheat}
+\textbf{源文件} & \textbf{对应主题} & \textbf{补进来的关键细节} & \textbf{复习时怎么用} \\
+\midrule
+\endhead
+\texttt{ARM64 Your DataBase.tex} & RDS / Aurora & 手动快照可跨账号共享、保留期为 0 关闭自动备份、实例类映射规律、Failover 约 30 秒 & 看“恢复 / 切主 / 改规格”边界 \\
+\texttt{Who messed up the data in my DB Cluster.tex} & RDS 审计 & Option Group 与主版本绑定、\texttt{QUERY} 事件、日志组命名路径 & 记审计的完整配置链路 \\
+\texttt{Aws jam cloudwatch pii.tex} & CloudWatch 遮蔽 & Task 1 修策略、Task 2 先识别字段、区域后缀 identifier、\texttt{logs:Unmask} & 记“先识别再遮蔽” \\
+\texttt{Look before you leap on the Cloud.tex} & 网络 / 权限 / 安全 & NAT 路由、S3 ARN 粒度、KMS 锁出、\texttt{:root} 语义 & 复习高频误判 \\
+\texttt{Sharing is caring - reusable code across Lambdas.tex} & Lambda Layers & \texttt{/opt} 路径、版本不可变、灰度升级、目录结构错误 & 记 Layer 生命周期 \\
+\texttt{CodePipeline Not Working.tex} & 模板路径故障 & \texttt{GenerateChangeSet} 修改点、\texttt{SourceApp::} 语法、Jam 保存选项 & 记“先看工件再看模板” \\
+\texttt{NEED FOR SPEED!!!.tex} & 并行 Lint & \texttt{Analysis} 阶段、\texttt{runOrder=1}、\texttt{SourceArtifact}、\texttt{LintProject} & 记并行语义 \\
+\texttt{Protect Your ECR Image.tex} & ECR 策略 & \texttt{ArnNotEquals + aws:PrincipalArn} 逻辑、上传镜像的附加权限 & 记“保留 Deny，排除合法角色” \\
+\bottomrule
+\end{longtable}
+
+\modulepage{01}{模块一：数据库与数据治理}{恢复、切主、审计、遮蔽}{%
+  \labelline{覆盖源题}{ARM64、DB Cluster 审计、CloudWatch PII}
+  \labelline{先看边界}{恢复 vs 切主；审计记录什么 vs 日志展示什么；历史日志 vs 新日志}
+  \labelline{本模块高频入口}{RDS Databases / Snapshots / Option groups；CloudWatch Log groups}
+  \labelline{考前先背}{PITR 属于自动备份；Failover 不改连接串；masking 只影响新日志}
+}
+\section{模块一：数据库与数据治理}
+
+\begin{modulebox}
+  \labelline{整合来源}{ARM64、DB Cluster 审计、CloudWatch PII}
+  \labelline{你会遇到}{恢复、切主、迁移、审计和日志遮蔽，这一组题最怕把“动作入口”和“机制边界”混掉。}
+  \labelline{先分辨}{恢复是不是基于备份重建；切主是不是在现有集群内部换 Writer；审计和遮蔽是不是分别作用在“记录什么”和“展示什么”。}
+  \labelline{高频入口}{RDS \flow{} Databases / Snapshots / Option groups；CloudWatch \flow{} Log groups。}
+  \labelline{考前只背这三件事}{PITR 属于自动备份；Aurora 切主不等于恢复；Logs masking 只影响新写入日志。}
+\end{modulebox}
+
+\subsection{RDS 备份与恢复}\label{sec:rds-backup}
+
+\challengecard
+  {RDS 实例、自动备份窗口、DB snapshots}
+  {能区分 PITR 和 snapshot restore，并知道恢复会新建实例}
+  {RDS \flow{} Databases \flow{} Modify / Actions}
+  {ARM64 Your DataBase.tex}
+
+\begin{actionbox}
+  \scene{题目要求你恢复数据库、比较备份机制，或判断能否做时间点恢复。}
+  \firstcheck{生命周期 / 备份策略}
+  \entry{RDS \flow{} Databases / Snapshots / Restore to point in time}
+  \begin{itemize}
+    \item 自动备份支持 \term{PITR（时间点恢复）}，保留期为 1--35 天
+    \item \textbf{Backup retention period} 设为 0 代表关闭自动备份，生产环境通常不建议
+    \item \textbf{Backup window} 最好放在业务低峰时段
+    \item 手动快照需手动创建，也需手动删除，适合长期保留
+    \item 无论是快照恢复还是时间点恢复，\term{都会创建新实例}，不会覆盖原实例
+  \end{itemize}
+\end{actionbox}
+
+\begin{principlebox}
+  \labelline{真正要记住的}{不是按钮顺序，而是自动备份和手动快照在生命周期上的差异。}
+  \begin{center}
+  \begin{tabular}{L{3.3cm}L{4.6cm}L{4.6cm}}
+    \rowcolor{wheat}
+    \textbf{维度} & \textbf{自动备份} & \textbf{手动快照} \\
+    \midrule
+    时间点恢复 & 支持 & 不支持 \\
+    保留策略 & 到期自动清理 & 永久保留直到手动删除 \\
+    跨账号共享 & 一般不作为共享载体 & 可共享，适合交接或长期留档 \\
+    删除实例后 & 通常随实例生命周期结束 & 可继续保留 \\
+    使用场景 & 运维恢复、误操作回滚 & 发布前留档、长期归档 \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 把“恢复”理解成覆盖原实例，结果在题里一直找“回滚按钮”
+    \item 看到“长期留存”仍然去选自动备份，而不是手动快照
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{看到“恢复到某个时刻”先想到自动备份和 PITR；看到“长期保留”先想到手动快照。}
+\end{reviewbox}
+
+\subsection{RDS Graviton 迁移}\label{sec:rds-graviton}
+
+\challengecard
+  {当前 x86 RDS 实例、目标 Graviton 实例类，例如 \texttt{db.r5.large} \flow{} \texttt{db.r6g.large}}
+  {控制台能选到兼容的 g 实例类，修改后实例恢复 \texttt{Available}}
+  {RDS \flow{} Databases \flow{} Modify \flow{} DB instance class}
+  {ARM64 Your DataBase.tex}
+
+\begin{actionbox}
+  \scene{题目要求把 x86 的 RDS 实例迁到 ARM 架构，以提升性价比。}
+  \firstcheck{版本 / 架构兼容性}
+  \entry{RDS \flow{} Databases \flow{} Modify \flow{} DB instance class}
+  \begin{itemize}
+    \item 在 \textbf{Modify} 页面查看当前实例规格和同档位可选家族
+    \item 选择同级别、同内存档位的 Graviton 家族规格
+    \item Jam 场景通常选 \textbf{Apply immediately}，便于立刻验证
+  \end{itemize}
+\end{actionbox}
+
+\begin{principlebox}
+  \labelline{核心判断}{Graviton 能否选择，不是死记某一张版本表，而是看 \term{实例家族}、\term{引擎主版本} 和 \term{官方支持矩阵}。}
+  \begin{itemize}
+    \item 常见家族包括 \texttt{r6g/m6g}、\texttt{r7g/m7g}、\texttt{r8g/m8g}
+    \item 迁移时通常保持 vCPU 和内存档位不变，例如 \texttt{r5.large} \flow{} \texttt{r6g.large}
+    \item 控制台能否出现该实例类，往往比你记忆中的旧表更可靠
+    \item 这类变更通常伴随重启；若是 Multi-AZ，停机影响通常会比单可用区更小
+  \end{itemize}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 把“架构代际”和“引擎最低版本”当成永远不变的固定答案
+    \item 只看 CPU 架构，不看实例类是否在当前版本下真的可选
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{Graviton 题先看控制台可选实例类，再回到官方支持矩阵确认，不要背过时表。}
+\end{reviewbox}
+
+\subsection{Aurora 集群与 Failover}\label{sec:aurora-failover}
+
+\challengecard
+  {Aurora Cluster、Writer / Reader 实例、Cluster Endpoint}
+  {目标 Reader 升为 Writer，Cluster Endpoint 仍可用，应用连接串无需修改}
+  {RDS \flow{} Databases \flow{} Aurora Cluster \flow{} Actions \flow{} Failover}
+  {ARM64 Your DataBase.tex}
+
+\begin{actionbox}
+  \scene{题目要你把某个 Reader 提升为 Writer，或者解释为什么切主后应用不用改连接串。}
+  \firstcheck{Endpoint / 集群抽象}
+  \entry{RDS \flow{} Databases \flow{} 进入 Aurora Cluster \flow{} Actions \flow{} Failover}
+  \begin{itemize}
+    \item 先进入 \term{Aurora Cluster}，不要只盯某个实例页面
+    \item 通过 \textbf{Failover} 提升目标 Reader
+    \item 验证 Writer 身份是否切换，以及 Cluster Endpoint 是否仍可用
+  \end{itemize}
+\end{actionbox}
+
+\begin{principlebox}
+  \begin{itemize}
+    \item \term{Cluster Endpoint} 指向当前 Writer
+    \item \term{Reader Endpoint} 负载均衡到只读实例
+    \item 手动或自动 Failover 通常在 \term{30 秒左右} 完成，原 Writer 会自动降级为 Reader
+    \item Failover 的价值在于：\term{切主不改应用连接地址}
+  \end{itemize}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 把 Failover 和 Restore 混为一谈，一个是集群内换主，一个是基于备份重建
+    \item 只验证实例角色变化，不验证应用实际连接的 Endpoint
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{“恢复”是重建；“Failover”是重选 Writer。应用不改连接串的关键在于 Cluster Endpoint 把切换细节藏掉了。}
+\end{reviewbox}
+
+\subsection{RDS 审计日志导出到 CloudWatch}\label{sec:rds-audit}
+
+\challengecard
+  {RDS 实例 \texttt{challenge-node-777}、自定义 Option Group、audit 日志组}
+  {CloudWatch 中出现 audit 日志组并持续写入，必要的查询事件可见}
+  {RDS \flow{} Option groups；RDS \flow{} Databases \flow{} Modify \flow{} Log exports}
+  {Who messed up the data in my DB Cluster.tex}
+
+\begin{actionbox}
+  \scene{题目要求开启 MySQL 审计并把日志送到 CloudWatch，用来追踪谁改了数据库。}
+  \firstcheck{功能入口 / 日志导出}
+  \entry{RDS \flow{} Option groups；RDS \flow{} Databases \flow{} Modify \flow{} Log exports}
+  \begin{enumerate}
+    \item 创建自定义 Option Group，数据库引擎和 Major version 要与实例一致
+    \item 添加 \texttt{MARIADB\_AUDIT\_PLUGIN}
+    \item 让 \texttt{SERVER\_AUDIT\_EVENTS} 包含查询事件，例如 \texttt{QUERY} 或 \texttt{QUERY\_DML}
+    \item 记住一个高频参数：\texttt{SERVER\_AUDIT\_QUERY\_LOG\_LIMIT=1024}
+    \item 在实例 \textbf{Modify} 页面关联 Option Group，并勾选 \textbf{Audit log} 导出
+  \end{enumerate}
+\end{actionbox}
+
+\begin{principlebox}
+  \begin{itemize}
+    \item Option Group 用来给 RDS 引擎挂额外能力，\texttt{default} 组不能直接修改
+    \item 只配 \texttt{CONNECT} 只能看到登录登出，看不到 SQL 文本
+    \item 配置生效后通常会开始记录，但官方仍提示该变更\term{可能造成短暂中断}
+    \item CloudWatch 中常见日志组路径是 \texttt{/aws/rds/instance/<实例名>/audit}
+  \end{itemize}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 只勾了 Log exports，却没装审计插件
+    \item 把 Parameter Group 和 Option Group 的职责混掉，结果一直找不到正确入口
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{这题的固定组合是 Option Group + 审计插件 + Log exports + CloudWatch 日志组。}
+\end{reviewbox}
+
+\subsection{CloudWatch Logs 数据保护与 PII 遮蔽}\label{sec:cloudwatch-pii}
+
+\challengecard
+  {\texttt{sensitive-data-01-lambda} / \texttt{sensitive-data-02-lambda} 日志组}
+  {新写入日志中的 PII 被遮蔽；若具备权限，可用 \texttt{logs:Unmask} 做核验}
+  {CloudWatch \flow{} Logs \flow{} Log groups \flow{} Data protection}
+  {Aws jam cloudwatch pii.tex}
+
+\begin{actionbox}
+  \scene{Lambda 日志打印了邮箱、手机号、SSN、密钥等敏感字段，需要在 CloudWatch Logs 里做 masking。}
+  \firstcheck{日志展示边界 / 数据保护}
+  \entry{CloudWatch \flow{} Logs \flow{} Log groups \flow{} Data protection}
+  \begin{enumerate}
+    \item 若题目像原始 Task 2 一样未知字段类型，先打开最新 Log stream 识别具体 PII
+    \item 打开目标 Log Group 的 \textbf{Data protection}
+    \item 选择需要的 managed data identifiers
+    \item 如需审计，再配置 S3、CloudWatch Logs 或 Firehose 作为 audit destination
+    \item 保存后用\term{新日志}验证遮蔽是否生效
+  \end{enumerate}
+\end{actionbox}
+
+\begin{principlebox}
+  \begin{itemize}
+    \item 遮蔽只对\term{新写入日志}生效，不会追溯历史日志
+    \item 如果手写 JSON，identifier 名称必须与官方 managed data identifier ID 完全一致
+    \item 一些 identifier 带区域后缀，例如 \texttt{PhoneNumber-US}、\texttt{Ssn-US}、\texttt{DriversLicense-US}
+    \item 默认看到的是遮蔽后的内容；有 \texttt{logs:Unmask} 的主体才能查看未遮蔽数据
+    \item 仅 \textbf{Standard log class} 支持 masking
+    \item 若配置审计目标，还需要额外的 \texttt{logs:CreateLogDelivery} 或目标服务权限
+  \end{itemize}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 反复看旧日志，以为配置没生效
+    \item Jam 里只要求“让遮蔽生效”，却把时间花在手写复杂 JSON 上
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{Masking 考的是“新旧日志边界”与“谁能看未遮蔽内容”，不是纯勾选题。}
+\end{reviewbox}
+
+\modulepage{02}{模块二：Serverless、网络与共享代码}{网络、权限、打包、版本}{%
+  \labelline{覆盖源题}{Look before you leap、Lambda Layers}
+  \labelline{先看边界}{超时多半是网络；403 多半是权限；\texttt{ImportModuleError} 多半是 Layer 或打包结构}
+  \labelline{本模块高频入口}{Lambda Configuration / Layers；VPC Route tables；IAM Roles；S3}
+  \labelline{考前先背}{VPC Lambda 出网靠私有子网 + NAT；对象操作要写 \texttt{/*}；Layer 版本不可变}
+}
+\section{模块二：Serverless、网络与共享代码}
+
+\begin{modulebox}
+  \labelline{整合来源}{Look before you leap、Lambda Layers}
+  \labelline{你会遇到}{Lambda 这组题最容易把网络、权限和打包问题混成一团。}
+  \labelline{先分辨}{超时多半是网络；403 多半是权限；\texttt{ImportModuleError} 多半是打包或 Layer 结构。}
+  \labelline{高频入口}{Lambda \flow{} Configuration / Layers；VPC \flow{} Subnets / Route tables；IAM \flow{} Roles；S3。}
+  \labelline{考前只背这三件事}{VPC Lambda 出网靠私有子网 + NAT；S3 桶 ARN 和对象 ARN 分两层；Layer 版本不可变。}
+\end{modulebox}
+
+\subsection{VPC Lambda 为什么在公有子网也不能上网}\label{sec:vpc-lambda}
+
+\challengecard
+  {目标 Lambda、私有子网、NAT Gateway、CloudWatch Logs、VPC 内 EC2 Web 服务}
+  {重试后超时消失，函数既能访问私网目标，也能访问公网资源}
+  {Lambda \flow{} Configuration \flow{} VPC；VPC \flow{} Route tables / NAT Gateways}
+  {Look before you leap on the Cloud.tex}
+
+\begin{actionbox}
+  \scene{Lambda 被放进 VPC 后访问互联网超时，但访问 VPC 内私有资源正常。}
+  \firstcheck{网络}
+  \entry{Lambda \flow{} Configuration \flow{} VPC；VPC \flow{} Route tables / NAT Gateways}
+  \begin{itemize}
+    \item 把 Lambda 放入\term{私有子网}
+    \item 确保该子网默认路由到 \term{NAT Gateway}
+    \item 不要把“子网被标成 Public”误当成 Lambda 可以直接上公网
+    \item 同时确认安全组放行对外 80/443，以及访问私有 EC2 所需端口
+  \end{itemize}
+\end{actionbox}
+
+\begin{principlebox}
+  \begin{itemize}
+    \item Lambda ENI 不会拿到公网 IP
+    \item Internet Gateway 需要公网地址映射才能完成对外访问
+    \item 所以“公有子网 + IGW”对 EC2 可行，对 Lambda 不成立
+  \end{itemize}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 看到 Public Subnet 就下意识觉得一定能上网
+    \item 只看 Security Group，不看路由表里到底是 \texttt{0.0.0.0/0} \flow{} \texttt{nat-*} 还是 \texttt{igw-*}
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{VPC Lambda 想上互联网，关键词不是 Public Subnet，而是 Private Subnet + NAT Gateway。}
+\end{reviewbox}
+
+\subsection{Lambda 无法读写 S3 对象}\label{sec:lambda-s3}
+
+\challengecard
+  {目标 Lambda 执行角色、Bucket Policy / IAM Policy、对象 ARN}
+  {\texttt{GetObject} / \texttt{PutObject} 不再 403，Lambda 可正常读写对象}
+  {IAM \flow{} Roles \flow{} Permissions / Trust relationships；S3 \flow{} Bucket policy}
+  {Look before you leap on the Cloud.tex}
+
+\begin{actionbox}
+  \scene{Lambda 角色已经有 S3 权限，但 \texttt{GetObject}、\texttt{PutObject} 仍然 403。}
+  \firstcheck{权限 / ARN 粒度}
+  \entry{IAM \flow{} Roles \flow{} 目标执行角色；S3 \flow{} Bucket policy；Lambda \flow{} Execution role}
+  \begin{itemize}
+    \item 桶级权限用 \texttt{arn:aws:s3:::bucket-name}
+    \item 对象级权限必须用 \texttt{arn:aws:s3:::bucket-name/*}
+    \item 若题目还包含删除动作，别漏掉 \texttt{s3:DeleteObject}
+    \item Trust Policy 的服务主体需要是 \texttt{lambda.amazonaws.com}
+  \end{itemize}
+\end{actionbox}
+
+\begin{principlebox}
+  \labelline{S3 ARN 有两层语义}{桶本身和桶内对象不是同一个资源面。}
+  \begin{center}
+  \begin{tabular}{@{}L{5.8cm}L{6.0cm}@{}}
+    \rowcolor{wheat}
+    \textbf{ARN} & \textbf{对应权限} \\
+    \midrule
+    \texttt{arn:aws:s3:::my-bucket} & 桶本身，例如 \texttt{s3:ListBucket} \\
+    \texttt{arn:aws:s3:::my-bucket/*} & 桶里的对象，例如 \texttt{s3:GetObject}、\texttt{s3:PutObject} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 给了桶 ARN，却忘了对象 ARN
+    \item 一直改权限动作列表，却没发现 Trust Policy 主体写错
+    \item 在 CloudFormation 里直接复用桶 ARN，却没写成 \texttt{!Sub "\${MyBucket.Arn}/*"}
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{S3 403 先问自己两件事：对象 ARN 有没有 \texttt{/*}，角色能不能被 Lambda 正常扮演。}
+\end{reviewbox}
+
+\subsection{Lambda Layers 与共享依赖}\label{sec:lambda-layers}
+
+\challengecard
+  {\texttt{tattooine-common} layer、ChallengeFunctionOne / Two、task-one / task-two layer zip}
+  {\texttt{Runtime.ImportModuleError} 消失；FunctionOne 可切到 v2，FunctionTwo 保持 v1 做灰度}
+  {Lambda \flow{} Layers；Lambda \flow{} Functions \flow{} Add a layer}
+  {Sharing is caring - reusable code across Lambdas.tex}
+
+\begin{actionbox}
+  \scene{两个 Lambda 缺共享依赖，报 \texttt{Runtime.ImportModuleError}。}
+  \firstcheck{打包结构 / 运行时兼容性}
+  \entry{Lambda \flow{} Layers；Lambda \flow{} Functions \flow{} Add a layer}
+  \begin{enumerate}
+    \item 从 S3 创建自定义 Layer
+    \item 按原题约束检查兼容架构与运行时，例如 \texttt{x86\_64}、\texttt{Node.js 22.x}
+    \item 把 Layer 挂到目标函数
+    \item 发布新版本时，先升级一个函数做灰度验证
+  \end{enumerate}
+\end{actionbox}
+
+\begin{principlebox}
+  \begin{itemize}
+    \item Layer 只适用于 \term{.zip 部署}函数，不适用于容器镜像函数
+    \item 版本不可变，更新必须发新版本
+    \item 一个函数最多关联 5 个 Layer
+    \item 同一个函数不能同时引用同一 Layer 的两个版本
+    \item 关联后内容会被解压到 \texttt{/opt/}
+    \item Node.js 最通用的目录是 \texttt{/opt/nodejs/node\_modules}
+  \end{itemize}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 目录结构打错，尤其是 Node.js 依赖没有放在 \texttt{nodejs/node\_modules} 这类可识别路径
+    \item 想“直接覆盖”旧 Layer 版本，而不是发新版本再替换引用
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{Node.js Layer 最稳的目录是 \texttt{nodejs/node\_modules}；Layer 的本质是“只读版本化共享依赖”。}
+\end{reviewbox}
+
+\modulepage{03}{模块三：DevOps 交付与流水线}{路径、并行语义、资源策略}{%
+  \labelline{覆盖源题}{Pipeline 路径、并行 Lint、ECR 策略}
+  \labelline{先看边界}{找不到模板先查路径；时间变长先查 Stage 与 \texttt{runOrder}；推镜像被拒先查显式 Deny}
+  \labelline{本模块高频入口}{CodePipeline Edit pipeline；CodeBuild Service role；ECR Repository policy}
+  \labelline{考前先背}{先看 Artifact；同 Stage 同 \texttt{runOrder} 才并行；显式 Deny 最高优先}
+}
+\section{模块三：DevOps 交付与流水线}
+
+\begin{modulebox}
+  \labelline{整合来源}{Pipeline 路径、并行 Lint、ECR 策略}
+  \labelline{你会遇到}{这一组题看起来像“流水线坏了”，但真正原因通常分别是路径、并行语义和资源策略。}
+  \labelline{先分辨}{找不到模板先查路径；耗时变长先查 Stage 和 \texttt{runOrder}；推镜像被拒先查显式 Deny。}
+  \labelline{高频入口}{CodePipeline \flow{} Edit pipeline；CodeBuild \flow{} Service role；ECR \flow{} Repository policy。}
+  \labelline{考前只背这三件事}{Artifact 路径写相对路径；同 Stage 同 \texttt{runOrder} 并行；显式 Deny 最高优先。}
+\end{modulebox}
+
+\subsection{CodePipeline 找不到 CloudFormation 模板}\label{sec:codepipeline-template}
+
+\challengecard
+  {\texttt{SourceApp} 工件、DeployTestStack、ChangeSet Action、目标模板路径}
+  {Pipeline 成功执行；新的 CloudFormation 堆栈创建成功；堆栈名出现在主堆栈 Outputs}
+  {CodePipeline \flow{} Edit pipeline \flow{} Deploy action \flow{} Template path}
+  {CodePipeline Not Working.tex}
+
+\begin{actionbox}
+  \scene{Deploy 阶段报错：}
+\begin{lstlisting}
+File [template.yaml] does not exist in artifact [SourceApp]
+\end{lstlisting}
+  \firstcheck{路径}
+  \entry{CodePipeline \flow{} Edit pipeline \flow{} Deploy action \flow{} Template path}
+  \begin{itemize}
+    \item 原题里真正修改的是 \texttt{DeployTestStack} 阶段中的 \texttt{GenerateChangeSet} Action
+    \item 先确认 Source Artifact 中真实存在的相对路径
+    \item 再修改 CloudFormation Action 使用的模板路径
+    \item 在本 Jam 环境下，保存时勾选 “No resource updates needed for this source action change”，出现短暂 ValidationError 也不必先慌
+  \end{itemize}
+\end{actionbox}
+
+\begin{principlebox}
+  \labelline{这题本质}{不是 CloudFormation 语法，而是“工件名 + 相对路径”这对组合。}
+  某些界面会把它显示为类似：
+\begin{lstlisting}
+SourceApp::infrastructure-as-code/working.template.yaml
+\end{lstlisting}
+\labelline{如果仓库权限受限}{在 Jam 环境里也可以回到 Artifact 桶，下载 zip 后看内部真实路径。}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 看到 Deploy 报错就先怀疑模板内容，忽略了路径
+    \item 把 Jam 环境里的保存选项，当成所有生产环境都必须照搬的规则
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{Pipeline 找不到模板，先定位 Artifact，再定位相对路径。}
+\end{reviewbox}
+
+\subsection{CodePipeline 中并行加入 Lint}\label{sec:codepipeline-lint}
+
+\challengecard
+  {Analysis Stage、\texttt{SourceArtifact}、\texttt{LintProject-xxx}、CodePipeline 预建 IAM 角色}
+  {Lint 与现有分析动作并行执行，流水线总时长不按串行相加}
+  {CodePipeline \flow{} Edit stage \flow{} Analysis Stage \flow{} Action runOrder}
+  {NEED FOR SPEED!!!.tex}
+
+\begin{actionbox}
+  \scene{现有 Pipeline 想加 Lint，但又不想串行拉长总时长。}
+  \firstcheck{并行语义}
+  \entry{CodePipeline \flow{} Edit stage \flow{} Analysis Stage \flow{} Action runOrder}
+  \begin{itemize}
+    \item 把 Lint Action 放进现有 Analysis Stage
+    \item 让它和已有分析 Action 使用相同的 \texttt{runOrder}，原题里都是 \texttt{1}
+    \item 常见配置组合是输入构件 \texttt{SourceArtifact}、项目 \texttt{LintProject-xxx}、Build type 为单次构建
+    \item 保存后观察 Stage 总耗时是否由最慢 Action 决定
+  \end{itemize}
+\end{actionbox}
+
+\begin{principlebox}
+  \begin{itemize}
+    \item 同一 Stage、相同 \texttt{runOrder} 的 Action 会并行执行
+    \item 这样能避免把多个分析步骤按串行相加
+    \item 但 Stage 结束时间仍然取决于\term{最慢的那个 Action}
+  \end{itemize}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 新建一个独立 Stage，结果无意中把流程变串行
+    \item 误以为“并行”就等于对总时长没有任何影响
+    \item 忘了保存时勾选 Jam 环境里的“无需资源更新”选项，导致额外权限报错
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{这题不是“怎么写 Lint”，而是“怎么利用 Stage 并行语义”。}
+\end{reviewbox}
+
+\subsection{ECR 仓库策略挡住了 CodeBuild}\label{sec:ecr-policy}
+
+\challengecard
+  {\texttt{pyei-challenge-app}、CodeBuild Service Role ARN、\texttt{DenyPutImage} 语句}
+  {仓库策略中的 Deny 仍保留，但 CodeBuild 重新可以推镜像}
+  {CodeBuild \flow{} Service role；ECR \flow{} Repositories \flow{} Permissions \flow{} Repository policy}
+  {Protect Your ECR Image.tex}
+
+\begin{actionbox}
+  \scene{ECR 仓库里有一条 \texttt{Deny}，导致 CodeBuild 也无法推镜像。}
+  \firstcheck{资源策略}
+  \entry{CodeBuild \flow{} Service role；ECR \flow{} Permissions \flow{} Repository policy}
+  \begin{itemize}
+    \item 先找到 CodeBuild Service Role ARN
+    \item 在 ECR 仓库策略里保留 \texttt{Deny}
+    \item 通过 \texttt{Condition + ArnNotEquals + aws:PrincipalArn} 排除该服务角色
+  \end{itemize}
+\end{actionbox}
+
+\begin{principlebox}
+  \begin{itemize}
+    \item 显式 \texttt{Deny} 优先级最高
+    \item 但可以通过条件让某些请求\term{不满足}这条 Deny
+    \item \texttt{ecr:PutImage} 管的是镜像 manifest 和 tag，镜像层上传还依赖其他上传类动作
+  \end{itemize}
+\begin{lstlisting}[language={}]
+{
+  "Effect": "Deny",
+  "Principal": "*",
+  "Action": "ecr:PutImage",
+  "Condition": {
+    "ArnNotEquals": {
+      "aws:PrincipalArn": "arn:aws:iam::<account-id>:role/codebuild-xxx-service-role"
+    }
+  }
+}
+\end{lstlisting}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 一股脑把 Deny 删掉，虽然过题，但失去原题想保留的防护意图
+    \item 用成 \texttt{ArnEquals}，结果反而只把 CodeBuild 自己拒掉
+    \item 只放行 \texttt{ecr:PutImage}，却忘了镜像推送还需要上传层相关动作
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{Deny 不是一定要删，而是要让合法的服务角色从条件里被排除出去。}
+\end{reviewbox}
+
+\modulepage{04}{模块四：安全策略与跨账号控制}{权限入口、Principal 粒度、最小授权}{%
+  \labelline{覆盖源题}{Look before you leap}
+  \labelline{先看边界}{KMS 先看 Key Policy 入口；S3 跨账号先看 Principal 是否写得过宽}
+  \labelline{本模块高频入口}{KMS Key policy；S3 Bucket policy；IAM Roles}
+  \labelline{考前先背}{Key Policy 先于 IAM；\texttt{:root} 代表整个账号；跨账号要同时看资源策略与身份策略}
+}
+\section{模块四：安全策略与跨账号控制}
+
+\begin{modulebox}
+  \labelline{整合来源}{Look before you leap}
+  \labelline{你会遇到}{这组题最考验对资源策略边界的理解，不是会不会点按钮，而是有没有看清“谁先生效、把门开给谁”。}
+  \labelline{先分辨}{KMS 看 Key Policy 入口；S3 跨账号看 Bucket Policy 的 Principal 是否写得过宽。}
+  \labelline{高频入口}{KMS \flow{} Key policy；S3 \flow{} Bucket policy；IAM \flow{} Roles / Policies。}
+  \labelline{考前只背这三件事}{KMS 先看 Key Policy；\texttt{:root} 代表整个账号；跨账号访问要同时看资源策略和对方身份策略。}
+\end{modulebox}
+
+\subsection{KMS 管理员被锁出}\label{sec:kms-lockout}
+
+\challengecard
+  {\texttt{jam-data-encryption-key}、tmp admin role、\texttt{JamTask3SecurityAdminRoleArn}}
+  {管理员角色重新回到 \texttt{KeyAdministrators} 中，后续可以继续管理该 Key}
+  {KMS \flow{} Customer managed keys \flow{} Key policy}
+  {Look before you leap on the Cloud.tex}
+
+\begin{actionbox}
+  \scene{你是 IAM 管理员，但突然无法继续管理某个 KMS Key。}
+  \firstcheck{权限入口 / Key Policy}
+  \entry{KMS \flow{} Customer managed keys \flow{} Key policy}
+  \begin{itemize}
+    \item 先切换到仍有权限的临时管理员角色，例如原题里的 tmp admin role
+    \item 编辑 Key Policy，把可靠的管理员主体重新加回去
+    \item 至少保留两个稳定管理员，避免再次单点锁出
+  \end{itemize}
+\end{actionbox}
+
+\begin{principlebox}
+  \begin{itemize}
+    \item KMS 的权限入口是 \term{Key Policy}
+    \item IAM Policy 不是天然生效，而是要先被 Key Policy 放行
+    \item 如果既没有账户级入口，也没有其他管理员主体，Key 可能变成 \term{unmanageable}
+    \item 严重情况下可能需要更高权限管理员甚至 AWS Support 介入
+  \end{itemize}
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 把 KMS 当成普通 IAM 服务，以为有管理员权限就能接管一切
+    \item 修复时只加回一个人，留下新的单点风险
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{KMS 题先问“我是不是在 Key Policy 入口里”，而不是先问“IAM Policy 写没写”。}
+\end{reviewbox}
+
+\subsection{S3 跨账号访问为什么会放大到整个对方账号}\label{sec:s3-cross-account}
+
+\challengecard
+  {目标 Bucket、\texttt{EXTERNAL\_ACCOUNT\_ID}、\texttt{role/S3CrossAccountAccess}}
+  {只有 \texttt{S3CrossAccountAccess} 角色可访问，其他主体会被拒绝}
+  {S3 \flow{} Bucket policy}
+  {Look before you leap on the Cloud.tex}
+
+\begin{actionbox}
+  \scene{你本来只想允许外部账号里的某个角色访问桶，但实际上整个外部账号的人都能用。}
+  \firstcheck{资源策略 / Principal 粒度}
+  \entry{S3 \flow{} Bucket policy}
+  把 Bucket Policy 的 \texttt{Principal} 从：
+\begin{lstlisting}
+arn:aws:iam::EXTERNAL_ACCOUNT_ID:root
+\end{lstlisting}
+  改成精确的角色 ARN，例如：
+\begin{lstlisting}
+arn:aws:iam::EXTERNAL_ACCOUNT_ID:role/S3CrossAccountAccess
+\end{lstlisting}
+\end{actionbox}
+
+\begin{principlebox}
+  \texttt{:root} 在跨账号资源策略里并不表示“只允许对方 Root 用户”，而是把权限\term{委派给整个外部账号}。之后对方账号管理员还能再通过 IAM 把权限授给更多主体。
+\end{principlebox}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 看到 \texttt{:root} 就直觉理解成“只放给对方根用户”
+    \item 只看自己这一侧的 Bucket Policy，不看对方账号还能如何二次分发权限
+    \item 忘记对敏感数据再加 MFA、IP 或 VPC Endpoint 等条件限制
+  \end{itemize}
+\end{pitfallbox}
+
+\begin{reviewbox}
+  \remember{跨账号访问要记两层：资源策略决定把门开给谁，对方身份策略决定谁最终能穿过这扇门。}
+\end{reviewbox}
+
+\modulepage{05}{考前复习区}{速刷、速查、复盘模板}{%
+  \labelline{适合什么时候看}{考前 10 分钟、做题间隙、赛后统一回收}
+  \labelline{先看顺序}{先扫问题域，再刷误区清单，最后看速查表和复盘模板}
+  \labelline{本区用途}{把前面的题目压缩成能快速回忆的最小信息单元}
+}
+\section{考前复习区}
+
+\subsection{考前 10 分钟怎么刷}
+
+\begin{guidebox}
+  \begin{enumerate}
+    \item 先看“七类高频问题域”，把题目归到路径、权限、网络、版本、资源策略、Endpoint 或生命周期。
+    \item 再看各模块的“模块导读”，回想每组题最容易混掉的判断边界。
+    \item 最后只刷复习卡片和下面的速查表，不再重新读完整解释。
+  \end{enumerate}
+\end{guidebox}
+
+\subsection{高频误区清单}
+
+\begin{pitfallbox}
+  \begin{itemize}
+    \item 把 Public Subnet 当成 Lambda 出网的充分条件
+    \item 把 S3 桶 ARN 和对象 ARN 混为一谈
+    \item 把 KMS 的权限模型当成普通 IAM 服务理解
+    \item 把 CodePipeline 的模板路径问题误判成模板语法问题
+    \item 把并行执行误解成“永远零耗时增加”
+    \item 把 CloudWatch PII identifier 名称手写错
+    \item 把 \texttt{:root} 误读成“只允许对方 Root 用户”
+    \item 把 Failover 和 Restore 混成同一类动作
+  \end{itemize}
+\end{pitfallbox}
+
+\subsection{症状-原因-修复速查表}
+
+\begin{longtable}{@{}L{3.05cm}L{3.75cm}L{3.35cm}L{3.85cm}@{}}
+\rowcolor{wheat}
+\textbf{症状} & \textbf{根因} & \textbf{修复动作} & \textbf{底层原理} \\
+\midrule
+\endfirsthead
+\rowcolor{wheat}
+\textbf{症状} & \textbf{根因} & \textbf{修复动作} & \textbf{底层原理} \\
+\midrule
+\endhead
+Lambda 访问互联网超时 & 放在公有子网，只有 IGW 路由 & 改到私有子网并走 NAT Gateway & Lambda ENI 没公网 IP \\
+S3 对象操作 403 & 对象 ARN 少了 \texttt{/*} 或 Trust Policy 不对 & 补对象级资源 ARN，并确认执行角色可被 Lambda 扮演 & 桶级和对象级 ARN 分离，角色信任关系先成立 \\
+KMS 无法管理 Key & 当前主体不在 Key Policy 入口内 & 用仍有权限的角色修 Key Policy & KMS 先看 Key Policy \\
+Pipeline 找不到模板 & Artifact 中相对路径写错 & 改模板路径字段 & 先定位工件，再定位路径 \\
+加 Lint 后时间明显变长 & 串行新增 Stage 或最慢 Action 变慢 & 同 Stage 同 \texttt{runOrder} 并行 & 并行不等于无限加速 \\
+ECR 推镜像被拒 & 仓库策略 Deny 没排除服务角色 & 用 Principal ARN 条件排除 & 显式 Deny 优先 \\
+CloudWatch 看不到遮蔽 & 配错 identifiers 或看的是历史日志 & 选对 identifiers 并写入新日志验证 & masking 只影响新日志 \\
+Aurora 切主后应用不改串 & 应用连的是 Cluster Endpoint & 验证 Writer 身份而非改连接地址 & Endpoint 层屏蔽主从变化 \\
+恢复题要求某时刻回滚 & 误把快照当成 PITR 手段 & 走自动备份时间点恢复 & PITR 属于自动备份能力 \\
+\bottomrule
+\end{longtable}
+
+\subsection{赛后复盘模板}
+
+\begin{guidebox}
+  每做完一道 AWS Jam 题，都建议只用下面 5 行做复盘：
+  \begin{enumerate}
+    \item \textbf{症状：} 我最先看到的报错或异常现象是什么
+    \item \textbf{对象：} 真正出问题的是哪一个资源、哪一条策略、哪一条路径
+    \item \textbf{修复：} 我最终只改了哪一项
+    \item \textbf{原理：} 这背后对应的 AWS 机制是什么
+    \item \textbf{防复发：} 如果在生产环境，应该加什么保护措施
+  \end{enumerate}
+\end{guidebox}
+
+\subsection{最后的学习建议}
+
+\begin{principlebox}
+  \labelline{真正有效的复习}{不是重复看操作截图，而是重复做这三件事。}
+  \begin{itemize}
+    \item 把每道题压缩成一句“症状-原因-修复”
+    \item 把每种修复动作映射回 AWS 控制面入口
+    \item 把每个入口再映射回权限、网络、存储或生命周期原理
+  \end{itemize}
+  当你能在脑中先分辨问题域，再进入控制台找入口时，AWS Jam 的速度和稳定性都会明显上来。
+\end{principlebox}
+
+\clearpage
+\appendix
+\section{源题附录索引}
+
+\subsection{按源文件回看}
+
+\small
+\begin{longtable}{@{}L{4.1cm}L{3.4cm}L{3.7cm}L{2.6cm}@{}}
+\rowcolor{wheat}
+\textbf{源文件} & \textbf{本手册对应页} & \textbf{回看主题} & \textbf{高频资源} \\
+\midrule
+\endfirsthead
+\rowcolor{wheat}
+\textbf{源文件} & \textbf{本手册对应页} & \textbf{回看主题} & \textbf{高频资源} \\
+\midrule
+\endhead
+\texttt{ARM64 Your DataBase.tex} &
+\pageref{sec:rds-backup} / \pageref{sec:rds-graviton} / \pageref{sec:aurora-failover} &
+RDS 备份、Graviton、Aurora Failover &
+RDS 实例、Snapshots、Aurora Cluster \\
+\texttt{Who messed up the data in my DB Cluster.tex} &
+\pageref{sec:rds-audit} &
+RDS 审计日志上云 &
+challenge-node-777、audit group \\
+\texttt{Aws jam cloudwatch pii.tex} &
+\pageref{sec:cloudwatch-pii} &
+CloudWatch Logs PII 遮蔽 &
+sensitive-data-01 / 02 \\
+\texttt{Look before you leap on the Cloud.tex} &
+\pageref{sec:vpc-lambda} / \pageref{sec:lambda-s3} / \pageref{sec:kms-lockout} / \pageref{sec:s3-cross-account} &
+VPC Lambda、S3、KMS、跨账号 S3 &
+子网路由、执行角色、KMS Key、Bucket Policy \\
+\texttt{Sharing is caring - reusable code across Lambdas.tex} &
+\pageref{sec:lambda-layers} &
+Lambda Layers 共享依赖 &
+tattooine-common、ChallengeFunctions \\
+\texttt{CodePipeline Not Working.tex} &
+\pageref{sec:codepipeline-template} &
+CloudFormation 模板路径故障 &
+SourceApp、ChangeSet Action \\
+\texttt{NEED FOR SPEED!!!.tex} &
+\pageref{sec:codepipeline-lint} &
+CodePipeline 并行 Lint &
+Analysis Stage、SourceArtifact、LintProject \\
+\texttt{Protect Your ECR Image.tex} &
+\pageref{sec:ecr-policy} &
+ECR 仓库策略修复 &
+pyei-challenge-app、CodeBuild role \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\subsection{按题型回看}
+
+\small
+\begin{longtable}{@{}L{3.3cm}L{4.9cm}L{4.9cm}@{}}
+\rowcolor{wheat}
+\textbf{题型} & \textbf{先回看哪一节} & \textbf{再回哪份源题} \\
+\midrule
+\endfirsthead
+\rowcolor{wheat}
+\textbf{题型} & \textbf{先回看哪一节} & \textbf{再回哪份源题} \\
+\midrule
+\endhead
+恢复 / 备份 & 第 \pageref{sec:rds-backup} 页附近的 RDS 备份与恢复 & \texttt{ARM64 Your DataBase.tex} \\
+架构迁移 / 切主 & 第 \pageref{sec:rds-graviton}、\pageref{sec:aurora-failover} 页附近 & \texttt{ARM64 Your DataBase.tex} \\
+日志审计 / 遮蔽 & 第 \pageref{sec:rds-audit}、\pageref{sec:cloudwatch-pii} 页附近 & \texttt{Who messed up the data in my DB Cluster.tex}、\texttt{Aws jam cloudwatch pii.tex} \\
+Lambda 网络 / 权限 & 第 \pageref{sec:vpc-lambda}、\pageref{sec:lambda-s3} 页附近 & \texttt{Look before you leap on the Cloud.tex} \\
+共享依赖 / Layer 升级 & 第 \pageref{sec:lambda-layers} 页附近 & \texttt{Sharing is caring - reusable code across Lambdas.tex} \\
+Pipeline 路径 / 并行 & 第 \pageref{sec:codepipeline-template}、\pageref{sec:codepipeline-lint} 页附近 & \texttt{CodePipeline Not Working.tex}、\texttt{NEED FOR SPEED!!!.tex} \\
+资源策略 / 显式 Deny & 第 \pageref{sec:ecr-policy}、\pageref{sec:s3-cross-account} 页附近 & \texttt{Protect Your ECR Image.tex}、\texttt{Look before you leap on the Cloud.tex} \\
+KMS 管理入口 & 第 \pageref{sec:kms-lockout} 页附近 & \texttt{Look before you leap on the Cloud.tex} \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{原题 PDF 附录}
+
+\sourcepdfentry
+  {ARM64 Your DataBase}
+  {RDS 备份、Graviton 迁移、Aurora Failover}
+  {需要回看备份差异、实例类映射、切主流程时}
+  {ARM64 Your DataBase.pdf}
+  {sources/pdf/ARM64 Your DataBase.pdf}
+
+\sourcepdfentry
+  {Who messed up the data in my DB Cluster}
+  {RDS 审计日志上云}
+  {需要核对 Option Group、审计参数或日志组路径时}
+  {Who messed up the data in my DB Cluster.pdf}
+  {sources/pdf/Who messed up the data in my DB Cluster.pdf}
+
+\sourcepdfentry
+  {Aws jam cloudwatch pii}
+  {CloudWatch Logs PII 遮蔽}
+  {需要回看 Task 1 / Task 2 差别、identifier 或审计权限时}
+  {Aws jam cloudwatch pii.pdf}
+  {sources/pdf/Aws jam cloudwatch pii.pdf}
+
+\sourcepdfentry
+  {Look before you leap on the Cloud}
+  {VPC Lambda、S3 ARN、KMS、S3 跨账号}
+  {需要统一回看网络和权限类高频误判时}
+  {Look before you leap on the Cloud.pdf}
+  {sources/pdf/Look before you leap on the Cloud.pdf}
+
+\sourcepdfentry
+  {Sharing is caring - reusable code across Lambdas}
+  {Lambda Layers 与共享依赖}
+  {需要回看 Layer 版本、目录结构和灰度升级时}
+  {Sharing is caring - reusable code across Lambdas.pdf}
+  {sources/pdf/Sharing is caring - reusable code across Lambdas.pdf}
+
+\sourcepdfentry
+  {CodePipeline Not Working}
+  {CloudFormation 模板路径故障}
+  {需要回看 Artifact 路径、ChangeSet Action 和 Jam 保存约束时}
+  {CodePipeline Not Working.pdf}
+  {sources/pdf/CodePipeline Not Working.pdf}
+
+\sourcepdfentry
+  {NEED FOR SPEED!!!}
+  {CodePipeline 并行加入 Lint}
+  {需要回看 Analysis Stage、runOrder 和预建资源时}
+  {NEED FOR SPEED!!!.pdf}
+  {sources/pdf/NEED FOR SPEED!!!.pdf}
+
+\sourcepdfentry
+  {Protect Your ECR Image}
+  {ECR 资源策略修复}
+  {需要回看 Deny 条件逻辑、CodeBuild 角色 ARN 和 ECR 推送权限时}
+  {Protect Your ECR Image.pdf}
+  {sources/pdf/Protect Your ECR Image.pdf}
+
+\vfill
+\begin{center}
+  {\color{terracotta}\rule{0.52\linewidth}{1.3pt}}\\[0.55em]
+  {\color{ink}\small 本手册基于当前目录下 8 份 AWS Jam 文档重组而成。}
+\end{center}
+
+\end{document}
