@@ -2,7 +2,7 @@
 
 This repository is organized for multiple AWS Jam records over time.
 
-Each session lives in its own folder under `records/`, so future entries such as `KFC05`, `KFC06`, and later rounds can be added without reshaping the repository again.
+Each session lives under `records/`, so the repository root only needs to keep git metadata and shared documentation.
 
 ## Layout
 
@@ -14,10 +14,22 @@ Each session lives in its own folder under `records/`, so future entries such as
     - `sources/tex/`
     - `sources/pdf/`
     - `build/` (ignored)
+  - `KFC05/`
+    - `README.md`
+    - `challenges/`
+      - `<nn-challenge-slug>/`
+        - `IMG/`
+        - `TEX/`
+        - `PDF/`
 
 ## Current sessions
 
 - `KFC04`: fourth AWS Jam record, including the integrated handbook and the original source materials.
+- `KFC05`: challenge screenshots grouped under `records/KFC05/challenges/`, with numbered slug directories and placeholder `TEX/` / `PDF/` folders for later additions.
+
+## Notes
+
+- Challenge directories use a stable `nn-slug` format for ordering and Windows-safe paths.
 
 ## Build
 
