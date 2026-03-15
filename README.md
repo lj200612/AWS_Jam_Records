@@ -21,11 +21,27 @@ Each session lives under `records/`, so the repository root only needs to keep g
         - `IMG/`
         - `TEX/`
         - `PDF/`
+  - `KFC06/`
+    - `README.md`
+    - `challenges/`
+      - `<nn-challenge-slug>/`
+        - `IMG/`
+        - `TEX/`
+        - `PDF/`
+  - `KFC07/`
+    - `README.md`
+    - `challenges/`
+      - `<nn-challenge-slug>/`
+        - `IMG/`
+        - `TEX/`
+        - `PDF/`
 
 ## Current sessions
 
 - `KFC04`: fourth AWS Jam record, including the integrated handbook and the original source materials.
 - `KFC05`: challenge screenshots grouped under `records/KFC05/challenges/`, with numbered slug directories and placeholder `TEX/` / `PDF/` folders for later additions.
+- `KFC06`: challenge screenshots grouped under `records/KFC06/challenges/`, following the same numbered slug structure as `KFC05`.
+- `KFC07`: challenge screenshots grouped under `records/KFC07/challenges/`, following the same numbered slug structure as `KFC05`.
 
 ## Notes
 
